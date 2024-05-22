@@ -1,21 +1,21 @@
 <h2 align="center">
-    <p align="center">gh-migrate</p>
+    <p align="center">gh-transform</p>
 </h2>
 
 <h3 align="center">
-🔹<a  href="https://github.com/HikaruEgashira/gh-migrate/issues">Report Bug</a> &nbsp; &nbsp;
-🔹<a  href="https://github.com/HikaruEgashira/gh-migrate/issues">Request Feature</a>
+🔹<a  href="https://github.com/HikaruEgashira/gh-transform/issues">Report Bug</a> &nbsp; &nbsp;
+🔹<a  href="https://github.com/HikaruEgashira/gh-transform/issues">Request Feature</a>
 </h3>
 
 ```bash
-$ gh migrate --help
-migrate.md を表示します
+$ gh transform --help
+transform.md を表示します
 
 Usage:
-  gh-migrate [flags]
+  gh-transform [flags]
 
 Flags:
-  -h, --help          help for gh-migrate
+  -h, --help          help for gh-transform
   -r, --repo string   リポジトリ名
 ```
 
@@ -23,10 +23,10 @@ Flags:
 
 ```bash
 # Install
-gh extension install HikaruEgashira/gh-migrate
-gh migrate --repo HikaruEgashira/gh-migrate
+gh extension install HikaruEgashira/gh-transform
+gh transform --repo HikaruEgashira/gh-transform
 <h2 align="center">
-    <p align="center">gh-migrate</p>
+    <p align="center">gh-transform</p>
 </h2>
 ...
 ```

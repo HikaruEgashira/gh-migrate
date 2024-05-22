@@ -18,18 +18,18 @@ import (
 var workspacesDir = os.Getenv("HOME") + "/workspaces"
 
 var rootCmd = &cobra.Command{
-	Use:   "gh-migrate",
+	Use:   "gh-transform",
 	Short: "PRを作成します",
 	Long:  `PRを作成します`,
 	Run: func(cmd *cobra.Command, args []string) {
 		repo := cmd.Flag("repo").Value.String()
 		force := cmd.Flag("force").Value.String()
 
-		titleTemplate := "[gh-migrate]"
-		bodyTemplate := `This PR is created by [gh-migrate](https://github.com/HikaruEgashira/gh-migrate).
+		titleTemplate := "[gh-transform]"
+		bodyTemplate := `This PR is created by [gh-transform](https://github.com/HikaruEgashira/gh-transform).
 		---`
 		timestamp := time.Now().Format("20060102150405")
-		branchNameTemplate := "gh-migrate-" + timestamp
+		branchNameTemplate := "gh-transform-" + timestamp
 		defaultBranch := "main"
 
 		if force == "true" {
@@ -74,7 +74,7 @@ var rootCmd = &cobra.Command{
 			titleTemplate = titleTemplate + " " + shOption
 			bodyTemplate = bodyTemplate + "\n" + shOption
 
-			scriptFile := "__migrate.sh"
+			scriptFile := "__transform.sh"
 			scriptContent, err := os.ReadFile(shOption)
 			if err != nil {
 				log.Fatal(err)
