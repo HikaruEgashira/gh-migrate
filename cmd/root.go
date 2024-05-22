@@ -95,6 +95,15 @@ var rootCmd = &cobra.Command{
 		// git push
 		exec.Command("git", "switch", "-c", branchNameTemplate)
 		exec.Command("git", "add", ".")
+		// Check if there are changes to commit
+		statusOutput, err := exec.Command("git", "status", "--porcelain").Output()
+		if err != nil {
+			log.Fatal(err)
+		}
+		if len(statusOutput) == 0 {
+			fmt.Println("No changes to commit. Exiting.")
+			return
+		}
 		exec.Command("git", "commit", "-m", titleTemplate)
 		exec.Command("git", "push", "-u", "origin", branchNameTemplate)
 
