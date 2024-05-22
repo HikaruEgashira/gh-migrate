@@ -14,8 +14,8 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:   "gh-migrate",
-	Short: "migrate.md を表示します",
-	Long:  `migrate.md を表示します`,
+	Short: "PRを作成します",
+	Long:  `PRを作成します`,
 	Run: func(cmd *cobra.Command, args []string) {
 		repo := cmd.Flag("repo").Value.String()
 		force := cmd.Flag("force").Value.String()
@@ -38,12 +38,8 @@ var rootCmd = &cobra.Command{
 			}
 		}
 
-		// read migrate.md
-		migrate, err := os.ReadFile("workspaces/" + repo + "/migrate.md")
-		if err != nil {
-			fmt.Println("migrate.md not found")
-		}
-		fmt.Println(string(migrate))
+		// TODO
+		fmt.Println("TODO")
 	},
 }
 
@@ -57,5 +53,5 @@ func Execute() {
 func init() {
 	rootCmd.Flags().StringP("repo", "r", "", "リポジトリ名")
 	rootCmd.MarkFlagRequired("repo")
-	rootCmd.Flags().BoolP("force", "f", false, "migrate.md を強制的に取得します")
+	rootCmd.Flags().BoolP("force", "f", false, "cacheを削除して再取得します")
 }
