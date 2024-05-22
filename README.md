@@ -8,15 +8,18 @@
 </h3>
 
 ```bash
-$ gh migrate --help
-migrate.md を表示します
+$ gh migrate -h
+PRを作成します
 
 Usage:
   gh-migrate [flags]
 
 Flags:
+  -c, --cmd string    引数にあるコマンドを実行します
+  -f, --force         cacheを削除して再取得します
   -h, --help          help for gh-migrate
   -r, --repo string   リポジトリ名
+  -s, --sh string     引数にあるシェルスクリプトファイルを実行します
 ```
 
 ## Usage
