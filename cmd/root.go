@@ -92,37 +92,11 @@ var rootCmd = &cobra.Command{
 			exec.Command("rm", scriptFile).Run()
 		}
 
-		fmt.Println("git switch -c " + branchNameTemplate)
-		gitCmd := exec.Command("git", "switch", "-c", branchNameTemplate)
-		gitOutput, err := gitCmd.CombinedOutput()
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Println(string(gitOutput))
-
-		fmt.Println("git add .")
-		gitCmd = exec.Command("git", "add", ".")
-		gitOutput, err = gitCmd.CombinedOutput()
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Println(string(gitOutput))
-
-		fmt.Println("git commit -m " + titleTemplate)
-		gitCmd = exec.Command("git", "commit", "-m", titleTemplate)
-		gitOutput, err = gitCmd.CombinedOutput()
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Println(string(gitOutput))
-
-		fmt.Println("git push origin " + branchNameTemplate)
-		gitCmd = exec.Command("git", "push", "-u", "origin", branchNameTemplate)
-		gitOutput, err = gitCmd.CombinedOutput()
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Println(string(gitOutput))
+		// git push
+		exec.Command("git", "switch", "-c", branchNameTemplate)
+		exec.Command("git", "add", ".")
+		exec.Command("git", "commit", "-m", titleTemplate)
+		exec.Command("git", "push", "-u", "origin", branchNameTemplate)
 
 		// create PR
 		prArgs := []string{
