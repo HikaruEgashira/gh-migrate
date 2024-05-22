@@ -38,7 +38,7 @@ var rootCmd = &cobra.Command{
 			}
 		}
 
-		// --cmd
+		// exec command
 		cmdOption := cmd.Flag("cmd").Value.String()
 		if cmdOption != "" {
 			// move target workspace
@@ -56,6 +56,28 @@ var rootCmd = &cobra.Command{
 				log.Fatal(err)
 			}
 		}
+
+		// create branch
+		branchArgs := []string{"branch", "feature"}
+		_, _, err = gh.Exec(branchArgs...)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// push branch
+		pushArgs := []string{"push", "origin", "feature"}
+		_, _, err = gh.Exec(pushArgs...)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// create PR
+		prArgs := []string{"pr", "create", "--base", "main", "--head", "feature", "--title", "feature", "--body", "feature"}
+		_, _, err = gh.Exec(prArgs...)
+		if err != nil {
+			log.Fatal(err)
+		}
+
 	},
 }
 
