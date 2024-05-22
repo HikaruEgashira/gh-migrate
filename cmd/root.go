@@ -4,9 +4,9 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"fmt"
 	"log"
 	"os"
+	"os/exec"
 
 	gh "github.com/cli/go-gh/v2"
 	"github.com/spf13/cobra"
@@ -38,8 +38,24 @@ var rootCmd = &cobra.Command{
 			}
 		}
 
-		// TODO
-		fmt.Println("TODO")
+		// --cmd
+		cmdOption := cmd.Flag("cmd").Value.String()
+		if cmdOption != "" {
+			// move target workspace
+			err := os.Chdir("workspaces/" + repo)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			// exec command
+			cmd := exec.Command("sh", "-c", cmdOption)
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			err = cmd.Run()
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
 	},
 }
 
@@ -54,4 +70,5 @@ func init() {
 	rootCmd.Flags().StringP("repo", "r", "", "リポジトリ名")
 	rootCmd.MarkFlagRequired("repo")
 	rootCmd.Flags().BoolP("force", "f", false, "cacheを削除して再取得します")
+	rootCmd.Flags().StringP("cmd", "c", "", "引数にあるコマンドを実行します")
 }
