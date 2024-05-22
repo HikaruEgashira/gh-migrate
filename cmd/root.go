@@ -15,6 +15,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var workspacesDir = os.Getenv("HOME") + "/workspaces"
+
 var rootCmd = &cobra.Command{
 	Use:   "gh-migrate",
 	Short: "PRを作成します",
@@ -32,26 +34,20 @@ var rootCmd = &cobra.Command{
 
 		if force == "true" {
 			// remove directory
-			err := os.RemoveAll("workspaces/" + repo)
+			err := os.RemoveAll(workspacesDir + "/" + repo)
 			if err != nil {
 				log.Fatal(err)
 			}
 		}
 
 		// check if directory exists
-		_, err := os.Stat("workspaces/" + repo)
+		_, err := os.Stat(workspacesDir + "/" + repo)
 		if err != nil {
-			cloneArgs := []string{"repo", "clone", repo, "workspaces/" + repo, "--", "--depth=1"}
+			cloneArgs := []string{"repo", "clone", repo, workspacesDir + "/" + repo, "--", "--depth=1"}
 			_, _, err = gh.Exec(cloneArgs...)
 			if err != nil {
 				log.Fatal(err)
 			}
-		}
-
-		// move target workspace
-		err = os.Chdir("workspaces/" + repo)
-		if err != nil {
-			log.Fatal(err)
 		}
 
 		// get default branch
@@ -69,6 +65,7 @@ var rootCmd = &cobra.Command{
 			titleTemplate = titleTemplate + " " + cmdOption
 			bodyTemplate = bodyTemplate + "\n" + cmdOption
 
+			os.Chdir(workspacesDir + "/" + repo)
 			exec.Command("sh", "-c", cmdOption).Run()
 		}
 
@@ -77,20 +74,55 @@ var rootCmd = &cobra.Command{
 			titleTemplate = titleTemplate + " " + shOption
 			bodyTemplate = bodyTemplate + "\n" + shOption
 
-			scriptContent := []byte(shOption)
 			scriptFile := "__migrate.sh"
-			err := os.WriteFile(scriptFile, scriptContent, 0755)
+			scriptContent, err := os.ReadFile(shOption)
 			if err != nil {
 				log.Fatal(err)
 			}
-			exec.Command("sh", scriptFile).Run()
+
+			os.Chdir(workspacesDir + "/" + repo)
+			os.WriteFile(scriptFile, scriptContent, 0755)
+			runCmd := exec.Command("sh", scriptFile)
+			output, err := runCmd.Output()
+			if err != nil {
+				log.Fatal(err)
+			}
+			fmt.Println(string(output))
+
 			exec.Command("rm", scriptFile).Run()
 		}
 
-		exec.Command("git", "switch", "-c", branchNameTemplate).Run()
-		exec.Command("git", "add", ".").Run()
-		exec.Command("git", "commit", "-m", titleTemplate).Run()
-		exec.Command("git", "push", "origin", branchNameTemplate).Run()
+		fmt.Println("git switch -c " + branchNameTemplate)
+		gitCmd := exec.Command("git", "switch", "-c", branchNameTemplate)
+		gitOutput, err := gitCmd.CombinedOutput()
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(string(gitOutput))
+
+		fmt.Println("git add .")
+		gitCmd = exec.Command("git", "add", ".")
+		gitOutput, err = gitCmd.CombinedOutput()
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(string(gitOutput))
+
+		fmt.Println("git commit -m " + titleTemplate)
+		gitCmd = exec.Command("git", "commit", "-m", titleTemplate)
+		gitOutput, err = gitCmd.CombinedOutput()
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(string(gitOutput))
+
+		fmt.Println("git push origin " + branchNameTemplate)
+		gitCmd = exec.Command("git", "push", "-u", "origin", branchNameTemplate)
+		gitOutput, err = gitCmd.CombinedOutput()
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(string(gitOutput))
 
 		// create PR
 		prArgs := []string{
