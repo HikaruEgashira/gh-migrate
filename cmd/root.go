@@ -4,18 +4,16 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	gh "github.com/cli/go-gh/v2"
 	"github.com/spf13/cobra"
 )
-
-var workspacesDir = os.Getenv("HOME") + "/workspaces"
 
 var rootCmd = &cobra.Command{
 	Use:   "gh-migrate",
@@ -23,89 +21,89 @@ var rootCmd = &cobra.Command{
 	Long:  `PRを作成します`,
 	Run: func(cmd *cobra.Command, args []string) {
 		repo := cmd.Flag("repo").Value.String()
-		force := cmd.Flag("force").Value.String()
+		workPath := os.Getenv("HOME") + "/workspaces/" + repo
+		currentPath, _ := os.Getwd()
 
 		titleTemplate := "[gh-migrate]"
-		bodyTemplate := `This PR is created by [gh-migrate](https://github.com/HikaruEgashira/gh-migrate).
-		---`
-		timestamp := time.Now().Format("20060102150405")
-		branchNameTemplate := "gh-migrate-" + timestamp
-		defaultBranch := "main"
+		bodyTemplate := `This PR is created by [gh-migrate](https://github.com/HikaruEgashira/gh-migrate)
+---`
+		branchNameTemplate := "gh-migrate-" + time.Now().Format("20060102150405")
 
+		force := cmd.Flag("force").Value.String()
 		if force == "true" {
 			// remove directory
-			err := os.RemoveAll(workspacesDir + "/" + repo)
+			err := os.RemoveAll(workPath)
 			if err != nil {
 				log.Fatal(err)
 			}
 		}
 
 		// check if directory exists
-		_, err := os.Stat(workspacesDir + "/" + repo)
+		_, err := os.Stat(workPath)
 		if err != nil {
-			cloneArgs := []string{"repo", "clone", repo, workspacesDir + "/" + repo, "--", "--depth=1"}
+			cloneArgs := []string{"repo", "clone", repo, workPath, "--", "--depth=1"}
 			_, _, err = gh.Exec(cloneArgs...)
 			if err != nil {
 				log.Fatal(err)
 			}
+			fmt.Printf("Repository cloned: %s\n", repo)
 		}
 
 		// get default branch
-		stdout, _, _ := gh.Exec("repo", "view", "--json", "defaultBranchRef")
-		var defaultBranchRef map[string]interface{}
-		err = json.Unmarshal(stdout.Bytes(), &defaultBranchRef)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defaultBranch = defaultBranchRef["defaultBranchRef"].(map[string]interface{})["name"].(string)
+		os.Chdir(workPath)
+		stdout, _, _ := gh.Exec("repo", "view", "--json", "defaultBranchRef", "-q", ".defaultBranchRef.name")
+		defaultBranch := strings.TrimSpace(stdout.String())
 
 		// exec command
 		cmdOption := cmd.Flag("cmd").Value.String()
 		if cmdOption != "" {
-			titleTemplate = titleTemplate + " " + cmdOption
+			titleTemplate = titleTemplate + " run " + cmdOption
 			bodyTemplate = bodyTemplate + "\n" + cmdOption
 
-			os.Chdir(workspacesDir + "/" + repo)
-			exec.Command("sh", "-c", cmdOption).Run()
+			runOutput, err := exec.Command("sh", "-c", cmdOption).CombinedOutput()
+			if err != nil {
+				log.Fatal(err)
+			}
+			fmt.Println(string(runOutput))
 		}
 
 		shOption := cmd.Flag("sh").Value.String()
 		if shOption != "" {
-			titleTemplate = titleTemplate + " " + shOption
-			bodyTemplate = bodyTemplate + "\n" + shOption
-
 			scriptFile := "__migrate.sh"
-			scriptContent, err := os.ReadFile(shOption)
+			scriptContent, err := os.ReadFile(currentPath + "/" + shOption)
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			os.Chdir(workspacesDir + "/" + repo)
+			titleTemplate = titleTemplate + " run " + shOption
+			bodyTemplate = bodyTemplate + "\n" + "```bash\n" + string(scriptContent) + "\n```"
+
 			os.WriteFile(scriptFile, scriptContent, 0755)
-			runCmd := exec.Command("sh", scriptFile)
-			output, err := runCmd.Output()
+			runOutput, err := exec.Command("sh", scriptFile).CombinedOutput()
 			if err != nil {
 				log.Fatal(err)
 			}
-			fmt.Println(string(output))
+			fmt.Println(string(runOutput))
 
 			exec.Command("rm", scriptFile).Run()
 		}
 
-		// git push
-		exec.Command("git", "switch", "-c", branchNameTemplate)
-		exec.Command("git", "add", ".")
-		// Check if there are changes to commit
-		statusOutput, err := exec.Command("git", "status", "--porcelain").Output()
-		if err != nil {
-			log.Fatal(err)
-		}
+		// create branch
+		var out []byte
+		out, _ = exec.Command("git", "switch", "-c", branchNameTemplate).CombinedOutput()
+		fmt.Println(string(out))
+		out, _ = exec.Command("git", "add", ".").CombinedOutput()
+		fmt.Println(string(out))
+		statusOutput, _ := exec.Command("git", "status", "--porcelain").CombinedOutput()
 		if len(statusOutput) == 0 {
 			fmt.Println("No changes to commit. Exiting.")
 			return
 		}
-		exec.Command("git", "commit", "-m", titleTemplate)
-		exec.Command("git", "push", "-u", "origin", branchNameTemplate)
+
+		out, _ = exec.Command("git", "commit", "-m", titleTemplate).CombinedOutput()
+		fmt.Println(string(out))
+		out, _ = exec.Command("git", "push", "origin", branchNameTemplate).CombinedOutput()
+		fmt.Println(string(out))
 
 		// create PR
 		prArgs := []string{
@@ -117,9 +115,10 @@ var rootCmd = &cobra.Command{
 			"--body", bodyTemplate,
 			"--repo", repo,
 		}
+		fmt.Println(prArgs)
 		stdout, stderr, err := gh.Exec(prArgs...)
-		fmt.Println(stderr.String())
 		if err != nil {
+			fmt.Println(stderr.String())
 			log.Fatal(err)
 		}
 		fmt.Println(stdout.String())
