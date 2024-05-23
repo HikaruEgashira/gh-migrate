@@ -1,4 +1,4 @@
-module github.com/HikaruEgashira/gh-migrate
+module github.com/HikaruEgashira/gh-transform
 
 go 1.21.0
 
