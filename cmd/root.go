@@ -89,21 +89,17 @@ var rootCmd = &cobra.Command{
 		}
 
 		// create branch
-		var out []byte
-		out, _ = exec.Command("git", "switch", "-c", branchNameTemplate).CombinedOutput()
-		fmt.Println(string(out))
-		out, _ = exec.Command("git", "add", ".").CombinedOutput()
-		fmt.Println(string(out))
-		statusOutput, _ := exec.Command("git", "status", "--porcelain").CombinedOutput()
+		exec.Command("git", "switch", "-c", branchNameTemplate).Run()
+		exec.Command("git", "add", ".").Run()
+		statusOutput, _ := exec.Command("git", "status", "--porcelain").Output()
+		fmt.Println(string(statusOutput))
 		if len(statusOutput) == 0 {
 			fmt.Println("No changes to commit. Exiting.")
 			return
 		}
 
-		out, _ = exec.Command("git", "commit", "-m", titleTemplate).CombinedOutput()
-		fmt.Println(string(out))
-		out, _ = exec.Command("git", "push", "origin", branchNameTemplate).CombinedOutput()
-		fmt.Println(string(out))
+		exec.Command("git", "commit", "-m", titleTemplate).Run()
+		exec.Command("git", "push", "origin", branchNameTemplate).Run()
 
 		// create PR
 		prArgs := []string{
@@ -115,7 +111,6 @@ var rootCmd = &cobra.Command{
 			"--body", bodyTemplate,
 			"--repo", repo,
 		}
-		fmt.Println(prArgs)
 		stdout, stderr, err := gh.Exec(prArgs...)
 		if err != nil {
 			fmt.Println(stderr.String())
