@@ -150,7 +150,7 @@ func execAstGrep(astgrepOption string, titleTemplate *string, bodyTemplate *stri
 	*titleTemplate = *titleTemplate + " run astgrep " + astgrepOption
 	*bodyTemplate = *bodyTemplate + "\n" + "```yaml\n" + string(scriptContent) + "\n```"
 
-	runOutput, err := exec.Command("astgrep", "-c", currentPath+"/"+astgrepOption).CombinedOutput()
+	runOutput, err := exec.Command("sg", "scan", "-r", currentPath+"/"+astgrepOption, "--no-ignore", "hidden", "-U").CombinedOutput()
 	if err != nil {
 		log.Fatal(err)
 	}

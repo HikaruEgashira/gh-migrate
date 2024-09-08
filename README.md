@@ -15,13 +15,15 @@ Usage:
   gh-migrate [flags]
 
 Flags:
-  -a, --astgrep string   引数にあるymlファイルをast-grepとして実行します
-  -c, --cmd string       引数にあるコマンドを実行します
-  -f, --force            cacheを削除して再取得します
-  -h, --help             help for gh-migrate
   -r, --repo string      リポジトリ名
-  -g, --semgrep string   引数にあるymlファイルをsemgrepとして実行します
+  -f, --force            cacheを削除して再取得します
+
+  -c, --cmd string       引数にあるコマンドを実行します
   -s, --sh string        引数にあるシェルスクリプトファイルを実行します
+  -g, --semgrep string   引数にあるymlファイルをsemgrepとして実行します
+  -a, --astgrep string   引数にあるymlファイルをast-grepとして実行します
+
+  -h, --help             help for gh-migrate
 ```
 
 ## Usage
@@ -29,9 +31,30 @@ Flags:
 ```bash
 # Install
 gh extension install HikaruEgashira/gh-migrate
+```
+
+### Example1
+
+```bash
 gh migrate --repo HikaruEgashira/gh-migrate -s "sed -cmd '' 's/gh-migrate/gh-migrate2/g' README.md"
 
 https://github.com/HikaruEgashira/gh-migrate/pull/10
+```
+
+### Example2: GitHub Actionsのactions/checkoutをv4に変更する
+
+`cat ./example/upgrade-checkout.yml`
+
+```yml
+id: upgrade-checkout
+language: yml
+rule: {pattern: "uses: $NAME"}
+constraints: {NAME: {regex: ^actions/checkout}}
+fix: "uses: actions/checkout@v4"
+```
+
+```bash
+gh api --paginate "/search/code?q=user:HikaruEgashira+actions/checkout" -q ".items.[].repository.name" | sort -u | xargs -I {} gh migrate --repo HikaruEgashira/{} --astgrep ./example/upgrade-checkout.yml
 ```
 
 ## Acknowledgements

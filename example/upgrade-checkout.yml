@@ -1,0 +1,5 @@
+id: upgrade-checkout
+language: yml
+rule: {pattern: "uses: $NAME"}
+constraints: {NAME: {regex: ^actions/checkout}}
+fix: "uses: actions/checkout@v4"
