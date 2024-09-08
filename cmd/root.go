@@ -64,11 +64,11 @@ var rootCmd = &cobra.Command{
 		}
 		astgrepOption := cmd.Flag("astgrep").Value.String()
 		if astgrepOption != "" {
-			execAstGrep(astgrepOption, &titleTemplate, &bodyTemplate)
+			execAstGrep(astgrepOption, &titleTemplate, &bodyTemplate, currentPath)
 		}
 		semgrepOption := cmd.Flag("semgrep").Value.String()
 		if semgrepOption != "" {
-			execSemgrep(semgrepOption, &titleTemplate, &bodyTemplate)
+			execSemgrep(semgrepOption, &titleTemplate, &bodyTemplate, currentPath)
 		}
 
 		// create branch
@@ -141,22 +141,32 @@ func execShellScript(shOption string, titleTemplate *string, bodyTemplate *strin
 	exec.Command("rm", scriptFile).Run()
 }
 
-func execAstGrep(astgrepOption string, titleTemplate *string, bodyTemplate *string) {
-	*titleTemplate = *titleTemplate + " run astgrep " + astgrepOption
-	*bodyTemplate = *bodyTemplate + "\n" + "```yaml\n" + astgrepOption + "\n```"
+func execAstGrep(astgrepOption string, titleTemplate *string, bodyTemplate *string, currentPath string) {
+	scriptContent, err := os.ReadFile(currentPath + "/" + astgrepOption)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	runOutput, err := exec.Command("astgrep", "-c", astgrepOption).CombinedOutput()
+	*titleTemplate = *titleTemplate + " run astgrep " + astgrepOption
+	*bodyTemplate = *bodyTemplate + "\n" + "```yaml\n" + string(scriptContent) + "\n```"
+
+	runOutput, err := exec.Command("astgrep", "-c", currentPath+"/"+astgrepOption).CombinedOutput()
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println(string(runOutput))
 }
 
-func execSemgrep(semgrepOption string, titleTemplate *string, bodyTemplate *string) {
-	*titleTemplate = *titleTemplate + " run semgrep " + semgrepOption
-	*bodyTemplate = *bodyTemplate + "\n" + "```yaml\n" + semgrepOption + "\n```"
+func execSemgrep(semgrepOption string, titleTemplate *string, bodyTemplate *string, currentPath string) {
+	scriptContent, err := os.ReadFile(currentPath + "/" + semgrepOption)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	runOutput, err := exec.Command("semgrep", "--config", semgrepOption).CombinedOutput()
+	*titleTemplate = *titleTemplate + " run semgrep " + semgrepOption
+	*bodyTemplate = *bodyTemplate + "\n" + "```yaml\n" + string(scriptContent) + "\n```"
+
+	runOutput, err := exec.Command("semgrep", "--config", currentPath+"/"+semgrepOption).CombinedOutput()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -169,6 +179,6 @@ func init() {
 	rootCmd.Flags().BoolP("force", "f", false, "cacheを削除して再取得します")
 	rootCmd.Flags().StringP("cmd", "c", "", "引数にあるコマンドを実行します")
 	rootCmd.Flags().StringP("sh", "s", "", "引数にあるシェルスクリプトファイルを実行します")
-	rootCmd.Flags().StringP("astgrep", "a", "", "引数にあるymlをast-grepとして実行します")
-	rootCmd.Flags().StringP("Semgrep", "g", "", "引数にあるymlをsemgrepとして実行します")
+	rootCmd.Flags().StringP("astgrep", "a", "", "引数にあるymlファイルをast-grepとして実行します")
+	rootCmd.Flags().StringP("semgrep", "g", "", "引数にあるymlファイルをsemgrepとして実行します")
 }
