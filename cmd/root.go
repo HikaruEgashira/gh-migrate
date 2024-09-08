@@ -137,10 +137,22 @@ func execShellScript(shOption string, titleTemplate *string, bodyTemplate *strin
 	exec.Command("rm", scriptFile).Run()
 }
 
+func execAstGrep(astgrepOption string, titleTemplate *string, bodyTemplate *string) {
+	*titleTemplate = *titleTemplate + " run astgrep " + astgrepOption
+	*bodyTemplate = *bodyTemplate + "\n" + "```yaml\n" + astgrepOption + "\n```"
+
+	runOutput, err := exec.Command("astgrep", "-c", astgrepOption).CombinedOutput()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(runOutput))
+}
+
 func init() {
 	rootCmd.Flags().StringP("repo", "r", "", "リポジトリ名")
 	rootCmd.MarkFlagRequired("repo")
 	rootCmd.Flags().BoolP("force", "f", false, "cacheを削除して再取得します")
 	rootCmd.Flags().StringP("cmd", "c", "", "引数にあるコマンドを実行します")
 	rootCmd.Flags().StringP("sh", "s", "", "引数にあるシェルスクリプトファイルを実行します")
+	rootCmd.Flags().StringP("astgrep", "a", "", "引数にあるymlをast-grepとして実行します")
 }
