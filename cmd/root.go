@@ -66,6 +66,10 @@ var rootCmd = &cobra.Command{
 		if astgrepOption != "" {
 			execAstGrep(astgrepOption, &titleTemplate, &bodyTemplate)
 		}
+		semgrepOption := cmd.Flag("semgrep").Value.String()
+		if semgrepOption != "" {
+			execSemgrep(semgrepOption, &titleTemplate, &bodyTemplate)
+		}
 
 		// create branch
 		exec.Command("git", "switch", "-c", branchNameTemplate).Run()
@@ -148,6 +152,17 @@ func execAstGrep(astgrepOption string, titleTemplate *string, bodyTemplate *stri
 	fmt.Println(string(runOutput))
 }
 
+func execSemgrep(semgrepOption string, titleTemplate *string, bodyTemplate *string) {
+	*titleTemplate = *titleTemplate + " run semgrep " + semgrepOption
+	*bodyTemplate = *bodyTemplate + "\n" + "```yaml\n" + semgrepOption + "\n```"
+
+	runOutput, err := exec.Command("semgrep", "--config", semgrepOption).CombinedOutput()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(runOutput))
+}
+
 func init() {
 	rootCmd.Flags().StringP("repo", "r", "", "リポジトリ名")
 	rootCmd.MarkFlagRequired("repo")
@@ -155,4 +170,5 @@ func init() {
 	rootCmd.Flags().StringP("cmd", "c", "", "引数にあるコマンドを実行します")
 	rootCmd.Flags().StringP("sh", "s", "", "引数にあるシェルスクリプトファイルを実行します")
 	rootCmd.Flags().StringP("astgrep", "a", "", "引数にあるymlをast-grepとして実行します")
+	rootCmd.Flags().StringP("Semgrep", "g", "", "引数にあるymlをsemgrepとして実行します")
 }
