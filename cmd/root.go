@@ -30,15 +30,14 @@ var rootCmd = &cobra.Command{
 		branchNameTemplate := "gh-migrate-" + time.Now().Format("20060102150405")
 
 		force := cmd.Flag("force").Value.String()
+
 		if force == "true" {
-			// remove directory
 			err := os.RemoveAll(workPath)
 			if err != nil {
 				log.Fatal(err)
 			}
 		}
 
-		// check if directory exists
 		_, err := os.Stat(workPath)
 		if err != nil {
 			cloneArgs := []string{"repo", "clone", repo, workPath, "--", "--depth=1"}
@@ -48,44 +47,24 @@ var rootCmd = &cobra.Command{
 			}
 			fmt.Printf("Repository cloned: %s\n", repo)
 		}
+		os.Chdir(workPath)
 
 		// get default branch
-		os.Chdir(workPath)
 		stdout, _, _ := gh.Exec("repo", "view", "--json", "defaultBranchRef", "-q", ".defaultBranchRef.name")
 		defaultBranch := strings.TrimSpace(stdout.String())
 
 		// exec command
 		cmdOption := cmd.Flag("cmd").Value.String()
 		if cmdOption != "" {
-			titleTemplate = titleTemplate + " run " + cmdOption
-			bodyTemplate = bodyTemplate + "\n" + cmdOption
-
-			runOutput, err := exec.Command("sh", "-c", cmdOption).CombinedOutput()
-			if err != nil {
-				log.Fatal(err)
-			}
-			fmt.Println(string(runOutput))
+			execCommand(cmdOption, &titleTemplate, &bodyTemplate)
 		}
-
 		shOption := cmd.Flag("sh").Value.String()
 		if shOption != "" {
-			scriptFile := "__migrate.sh"
-			scriptContent, err := os.ReadFile(currentPath + "/" + shOption)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			titleTemplate = titleTemplate + " run " + shOption
-			bodyTemplate = bodyTemplate + "\n" + "```bash\n" + string(scriptContent) + "\n```"
-
-			os.WriteFile(scriptFile, scriptContent, 0755)
-			runOutput, err := exec.Command("sh", scriptFile).CombinedOutput()
-			if err != nil {
-				log.Fatal(err)
-			}
-			fmt.Println(string(runOutput))
-
-			exec.Command("rm", scriptFile).Run()
+			execShellScript(shOption, &titleTemplate, &bodyTemplate, currentPath)
+		}
+		astgrepOption := cmd.Flag("astgrep").Value.String()
+		if astgrepOption != "" {
+			execAstGrep(astgrepOption, &titleTemplate, &bodyTemplate)
 		}
 
 		// create branch
@@ -125,6 +104,37 @@ func Execute() {
 	if err != nil {
 		os.Exit(1)
 	}
+}
+
+func execCommand(cmdOption string, titleTemplate *string, bodyTemplate *string) {
+	*titleTemplate = *titleTemplate + " run " + cmdOption
+	*bodyTemplate = *bodyTemplate + "\n" + cmdOption
+
+	runOutput, err := exec.Command("sh", "-c", cmdOption).CombinedOutput()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(runOutput))
+}
+
+func execShellScript(shOption string, titleTemplate *string, bodyTemplate *string, currentPath string) {
+	scriptFile := "__migrate.sh"
+	scriptContent, err := os.ReadFile(currentPath + "/" + shOption)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	*titleTemplate = *titleTemplate + " run " + shOption
+	*bodyTemplate = *bodyTemplate + "\n" + "```bash\n" + string(scriptContent) + "\n```"
+
+	os.WriteFile(scriptFile, scriptContent, 0755)
+	runOutput, err := exec.Command("sh", scriptFile).CombinedOutput()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(runOutput))
+
+	exec.Command("rm", scriptFile).Run()
 }
 
 func init() {
