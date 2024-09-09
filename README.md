@@ -43,9 +43,8 @@ https://github.com/HikaruEgashira/gh-migrate/pull/10
 
 ### Example2: GitHub Actionsのactions/checkoutをv4に変更する
 
-`cat ./example/upgrade-checkout.yml`
-
 ```yml
+# ./example/upgrade-checkout.yml
 id: upgrade-checkout
 language: yml
 rule: {pattern: "uses: $NAME"}
