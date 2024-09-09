@@ -100,6 +100,14 @@ var rootCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 		fmt.Println(stdout.String())
+
+		// open PR
+		if cmd.Flag("open").Value.String() != "" {
+			exec.Command("open", stdout.String()).Run()
+		}
+		if cmd.Flag("with-dev").Value.String() != "" {
+			exec.Command("open", strings.ReplaceAll(stdout.String(), "com/", "dev/")).Run()
+		}
 	},
 }
 
@@ -181,4 +189,6 @@ func init() {
 	rootCmd.Flags().StringP("sh", "s", "", "引数にあるシェルスクリプトファイルを実行します")
 	rootCmd.Flags().StringP("astgrep", "a", "", "引数にあるymlファイルをast-grepとして実行します")
 	rootCmd.Flags().StringP("semgrep", "g", "", "引数にあるymlファイルをsemgrepとして実行します")
+	rootCmd.Flags().String("open", "", "作成したPRをブラウザで開きます")
+	rootCmd.Flags().String("with-dev", "", "作成したPRをgithub.devで開きます")
 }

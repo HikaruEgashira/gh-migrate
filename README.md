@@ -23,6 +23,9 @@ Flags:
   -g, --semgrep string   引数にあるymlファイルをsemgrepとして実行します
   -a, --astgrep string   引数にあるymlファイルをast-grepとして実行します
 
+      --open string       作成したPRをブラウザで開きます
+      --with-dev string   作成したPRをgithub.devで開きます
+
   -h, --help             help for gh-migrate
 ```
 
