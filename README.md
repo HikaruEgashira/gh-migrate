@@ -1,10 +1,10 @@
 <h2 align="center">
-    <p align="center">gh-migrate2</p>
+    <p align="center">gh-migrate22</p>
 </h2>
 
 <h3 align="center">
-🔹<a  href="https://github.com/HikaruEgashira/gh-migrate2/issues">Report Bug</a> &nbsp; &nbsp;
-🔹<a  href="https://github.com/HikaruEgashira/gh-migrate2/issues">Request Feature</a>
+🔹<a  href="https://github.com/HikaruEgashira/gh-migrate22/issues">Report Bug</a> &nbsp; &nbsp;
+🔹<a  href="https://github.com/HikaruEgashira/gh-migrate22/issues">Request Feature</a>
 </h3>
 
 ```bash
@@ -12,7 +12,7 @@ $ gh migrate -h
 PRを作成します
 
 Usage:
-  gh-migrate2 [flags]
+  gh-migrate22 [flags]
 
 Flags:
   -r, --repo string      リポジトリ名
@@ -26,22 +26,22 @@ Flags:
       --open string       作成したPRをブラウザで開きます
       --with-dev string   作成したPRをgithub.devで開きます
 
-  -h, --help             help for gh-migrate2
+  -h, --help             help for gh-migrate22
 ```
 
 ## Usage
 
 ```bash
 # Install
-gh extension install HikaruEgashira/gh-migrate2
+gh extension install HikaruEgashira/gh-migrate22
 ```
 
 ### Example1
 
 ```bash
-gh migrate --repo HikaruEgashira/gh-migrate2 --cmd "sed -i '' 's/gh-migrate2/gh-migrate22/g' README.md"
+gh migrate --repo HikaruEgashira/gh-migrate22 --cmd "sed -i '' 's/gh-migrate22/gh-migrate222/g' README.md"
 
-https://github.com/HikaruEgashira/gh-migrate2/pull/10
+https://github.com/HikaruEgashira/gh-migrate22/pull/10
 ```
 
 ### Example2: GitHub Actionsのactions/checkoutをv4に変更する
