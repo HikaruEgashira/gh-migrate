@@ -14,14 +14,16 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run gh-migrate
         run: |
+          cargo install ast-grep --locked
+
           go mod tidy
           go build
           gh extension install .
           gh migrate --help
 
           mkdir work
-          gh migrate --repo HikaruEgashira/gh-migrate --astgrep ./ast-grep/rules/upgrade-actions-checkout.yml
-          env:
-            GH_TOKEN: ${{ github.token }}
+          gh migrate --repo HikaruEgashira/gh-migrate --workpath work --astgrep ./ast-grep/rules/upgrade-actions-checkout.yml
+        env:
+          GH_TOKEN: ${{ github.token }}
 
 # act push
