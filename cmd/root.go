@@ -91,7 +91,7 @@ func processRepo(repo string, cmd *cobra.Command) {
 	}
 
 	// create branch
-	err = exec.Command("git", "switch", "-c", branchNameTemplate).Run()
+	err = exec.Command("git", "switch", "--create", branchNameTemplate).Run()
 	if err != nil {
 		log.Fatalf("Failed to create branch: %v", err)
 	}
@@ -114,7 +114,7 @@ func processRepo(repo string, cmd *cobra.Command) {
 	if err != nil {
 		log.Fatalf("Failed to commit changes: %v", err)
 	}
-	err = exec.Command("git", "push", "origin", branchNameTemplate).Run()
+	err = exec.Command("git", "push", "-u", "origin", branchNameTemplate).Run()
 	if err != nil {
 		log.Fatalf("Failed to push changes: %v", err)
 	}
