@@ -109,7 +109,18 @@ func processRepo(repo string, cmd *cobra.Command) {
 		return
 	}
 
-	err = exec.Command("git", "commit", "-m", titleTemplate).Run()
+	statusOutput, err = exec.Command("git", "status", "--porcelain").Output()
+	if err != nil {
+		log.Fatalf("Failed to get git status: %v", err)
+	}
+	fmt.Println("Git status output:", string(statusOutput))
+	if len(statusOutput) == 0 {
+		fmt.Println("No changes to commit. Exiting.")
+		return
+	}
+
+	commitArgs := []string{"commit", "-m", titleTemplate}
+	err = exec.Command("git", commitArgs...).Run()
 	if err != nil {
 		log.Fatalf("Failed to commit changes: %v", err)
 	}
