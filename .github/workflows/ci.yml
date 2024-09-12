@@ -15,6 +15,7 @@ jobs:
             go mod tidy
             go build
             gh extension install .
+            gh migrate --help
             prurl=$(gh migrate --repo HikaruEgashira/gh-migrate --cmd "sed -i '' 's/gh-migrate/gh-migrate2/g' README.md")
             gh pr close $prurl
         env:
