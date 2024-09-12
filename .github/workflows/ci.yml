@@ -16,6 +16,6 @@ jobs:
             go mod tidy
             go build
             gh extension install .
-            gh migrate --repo HikaruEgashira/gh-migrate -s "sed -cmd '' 's/gh-migrate/gh-migrate2/g' README.md"
+            gh migrate --repo HikaruEgashira/gh-migrate --cmd "sed -i '' 's/gh-migrate/gh-migrate2/g' README.md"
         env:
             GH_TOKEN: ${{ github.token }}

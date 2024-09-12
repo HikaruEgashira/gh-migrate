@@ -39,7 +39,7 @@ gh extension install HikaruEgashira/gh-migrate
 ### Example1
 
 ```bash
-gh migrate --repo HikaruEgashira/gh-migrate -s "sed -cmd '' 's/gh-migrate/gh-migrate2/g' README.md"
+gh migrate --repo HikaruEgashira/gh-migrate --cmd "sed -i '' 's/gh-migrate/gh-migrate2/g' README.md"
 
 https://github.com/HikaruEgashira/gh-migrate/pull/10
 ```
