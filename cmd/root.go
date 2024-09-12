@@ -114,6 +114,10 @@ func processRepo(repo string, cmd *cobra.Command) {
 	if err != nil {
 		log.Fatalf("Failed to commit changes: %v", err)
 	}
+	err = exec.Command("git", "push", "origin", branchNameTemplate).Run()
+	if err != nil {
+		log.Fatalf("Failed to push changes: %v", err)
+	}
 
 	// create PR
 	prArgs := []string{
