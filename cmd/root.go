@@ -209,5 +209,5 @@ func init() {
 	rootCmd.Flags().StringP("semgrep", "g", "", "引数にあるymlファイルをsemgrepとして実行します")
 	rootCmd.Flags().String("open", "", "作成したPRをブラウザで開きます")
 	rootCmd.Flags().String("with-dev", "", "作成したPRをgithub.devで開きます")
-	rootCmd.Flags().String("workpath", "w", "作業ディレクトリのパスを指定します")
+	rootCmd.Flags().StringP("workpath", "w", "", "作業ディレクトリのパスを指定します")
 }
