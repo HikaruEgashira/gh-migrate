@@ -38,6 +38,9 @@ var rootCmd = &cobra.Command{
 
 func processRepo(repo string, cmd *cobra.Command) {
 	workPath := os.Getenv("HOME") + "/workspaces/" + repo
+	if cmd.Flag("workpath").Value.String() != "" {
+		workPath = cmd.Flag("workpath").Value.String() + "/" + repo
+	}
 	currentPath, _ := os.Getwd()
 
 	titleTemplate := "[gh-migrate]"
@@ -206,4 +209,5 @@ func init() {
 	rootCmd.Flags().StringP("semgrep", "g", "", "引数にあるymlファイルをsemgrepとして実行します")
 	rootCmd.Flags().String("open", "", "作成したPRをブラウザで開きます")
 	rootCmd.Flags().String("with-dev", "", "作成したPRをgithub.devで開きます")
+	rootCmd.Flags().String("workpath", "w", "作業ディレクトリのパスを指定します")
 }

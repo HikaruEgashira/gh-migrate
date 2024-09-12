@@ -19,7 +19,8 @@ jobs:
           gh extension install .
           gh migrate --help
 
-          prurl=$(gh migrate --repo HikaruEgashira/gh-migrate --cmd "ls" --force | grep 'http')
+          mkdir work
+          prurl=$(gh migrate --repo HikaruEgashira/gh-migrate --cmd "ls" --force --workpath work | grep 'http')
           echo $prurl
           # gh pr close $prurl
         env:
