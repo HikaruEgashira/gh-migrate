@@ -20,7 +20,7 @@ jobs:
           gh migrate --help
 
           mkdir work
-          gh migrate --repo HikaruEgashira/gh-migrate --cmd "sed -cmd '' 's/gh-migrate/gh-migrate2/g' README.md" --force --workpath work
+          gh migrate --repo HikaruEgashira/gh-migrate --cmd "sed -i '' 's/gh-migrate/gh-migrate2/g' README.md" --force --workpath work
         env:
             GH_TOKEN: ${{ github.token }}
 
