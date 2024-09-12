@@ -91,17 +91,32 @@ func processRepo(repo string, cmd *cobra.Command) {
 	}
 
 	// create branch
-	exec.Command("git", "switch", "-c", branchNameTemplate).Run()
-	exec.Command("git", "add", ".").Run()
-	statusOutput, _ := exec.Command("git", "status", "--porcelain").Output()
+	err = exec.Command("git", "switch", "-c", branchNameTemplate).Run()
+	if err != nil {
+		log.Fatalf("Failed to create branch: %v", err)
+	}
+	err = exec.Command("git", "add", ".").Run()
+	if err != nil {
+		log.Fatalf("Failed to add changes: %v", err)
+	}
+	statusOutput, err := exec.Command("git", "status", "--porcelain").Output()
+	if err != nil {
+		log.Fatalf("Failed to get git status: %v", err)
+	}
 	fmt.Println("Git status output:", string(statusOutput))
 	if len(statusOutput) == 0 {
 		fmt.Println("No changes to commit. Exiting.")
 		return
 	}
 
-	exec.Command("git", "commit", "-m", titleTemplate).Run()
-	exec.Command("git", "push", "origin", branchNameTemplate).Run()
+	err = exec.Command("git", "commit", "-m", titleTemplate).Run()
+	if err != nil {
+		log.Fatalf("Failed to commit changes: %v", err)
+	}
+	err = exec.Command("git", "push", "origin", branchNameTemplate).Run()
+	if err != nil {
+		log.Fatalf("Failed to push changes: %v", err)
+	}
 
 	// create PR
 	prArgs := []string{
