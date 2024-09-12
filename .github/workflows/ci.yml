@@ -1,0 +1,15 @@
+name: release
+on:
+  push:
+  pull_request:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+            go mod tidy
+            go build
+            gh extension install .
+            gh migrate --repo HikaruEgashira/gh-migrate -s "sed -cmd '' 's/gh-migrate/gh-migrate2/g' README.md"
