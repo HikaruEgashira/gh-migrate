@@ -20,8 +20,8 @@ jobs:
           gh migrate --help
 
           mkdir work
-          gh migrate --repo HikaruEgashira/gh-migrate --cmd "sed -i '' 's/gh-migrate/gh-migrate2/g' README.md" --force --workpath work
-        env:
+          gh migrate --repo HikaruEgashira/gh-migrate --astgrep ./ast-grep/rules/upgrade-actions-checkout.yml
+          env:
             GH_TOKEN: ${{ github.token }}
 
 # act push
