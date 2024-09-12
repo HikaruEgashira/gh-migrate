@@ -94,7 +94,7 @@ func processRepo(repo string, cmd *cobra.Command) {
 	exec.Command("git", "switch", "-c", branchNameTemplate).Run()
 	exec.Command("git", "add", ".").Run()
 	statusOutput, _ := exec.Command("git", "status", "--porcelain").Output()
-	fmt.Println(string(statusOutput))
+	fmt.Println("Git status output:", string(statusOutput))
 	if len(statusOutput) == 0 {
 		fmt.Println("No changes to commit. Exiting.")
 		return
@@ -115,7 +115,7 @@ func processRepo(repo string, cmd *cobra.Command) {
 	}
 	stdout, stderr, err := gh.Exec(prArgs...)
 	if err != nil {
-		fmt.Println(stderr.String())
+		fmt.Println("PR creation error:", stderr.String())
 		log.Fatal(err)
 	}
 	fmt.Println(stdout.String())
