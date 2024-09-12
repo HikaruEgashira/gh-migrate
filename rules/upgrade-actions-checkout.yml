@@ -1,0 +1,9 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/ast-grep/ast-grep/main/schemas/rule.json
+id: upgrade-actions-checkout
+language: yml
+rule: {pattern: "uses: $NAME"}
+constraints: {NAME: {regex: ^actions/checkout}}
+fix: "uses: actions/checkout@v4"
+message: "Upgrade the checkout action to v4"
+files:
+  - '**/.github/workflows/**'
