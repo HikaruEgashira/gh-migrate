@@ -11,9 +11,10 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.before }}
+          ref: ${{ github.sha }}
       - name: Download ast-grep
         run: |
           curl "https://github.com/ast-grep/ast-grep/releases/download/0.27.0/app-x86_64-unknown-linux-gnu.zip" -L -o ast-grep.zip
