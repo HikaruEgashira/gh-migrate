@@ -56,7 +56,7 @@ fix: "uses: actions/checkout@v4"
 ```
 
 ```bash
-gh api --paginate "/search/code?q=user:HikaruEgashira+actions/checkout" -q ".items.[].repository.name" | sort -u | xargs -I {} gh migrate --repo HikaruEgashira/{} --astgrep ./ast-grep/rules/upgrade-actions-checkout.yml
+gh api --paginate "/search/code?q=user:HikaruEgashira+actions/checkout" -q ".items.[].repository.name" | sort -u | xargs -I {} gh migrate --repo HikaruEgashira/{} --astgrep rules/upgrade-actions-checkout.yml
 ```
 
 ## Acknowledgements

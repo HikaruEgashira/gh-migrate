@@ -31,7 +31,7 @@ jobs:
           gh migrate --help
 
           mkdir work
-          gh migrate --repo HikaruEgashira/gh-migrate --workpath work --astgrep ./ast-grep/rules/upgrade-actions-checkout.yml
+          gh migrate --repo HikaruEgashira/gh-migrate --workpath work --astgrep rules/upgrade-actions-checkout.yml
         env:
           GH_TOKEN: ${{ github.token }}
 
