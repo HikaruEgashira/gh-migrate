@@ -20,9 +20,7 @@ jobs:
           gh migrate --help
 
           mkdir work
-          prurl=$(gh migrate --repo "HikaruEgashira/gh-migrate" --cmd ls --force --workpath work | grep 'http')
-          echo $prurl
-          # gh pr close $prurl
+          gh migrate --repo "HikaruEgashira/gh-migrate" --cmd ls --force --workpath work
         env:
             GH_TOKEN: ${{ github.token }}
 
