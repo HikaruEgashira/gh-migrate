@@ -1,10 +1,10 @@
-name: release
+name: CI
 on:
   push:
   pull_request:
 
 jobs:
-  release:
+  test:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -16,3 +16,5 @@ jobs:
             go build
             gh extension install .
             gh migrate --repo HikaruEgashira/gh-migrate -s "sed -cmd '' 's/gh-migrate/gh-migrate2/g' README.md"
+        env:
+            GH_TOKEN: ${{ github.token }}
