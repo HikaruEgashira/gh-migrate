@@ -37,7 +37,7 @@ var rootCmd = &cobra.Command{
 }
 
 func processRepo(repo string, cmd *cobra.Command) {
-	workPath := os.Getenv("HOME") + "/workspaces/" + repo
+	workPath := os.Getenv("HOME") + "/.gh-migrate/" + repo
 	if cmd.Flag("workpath").Value.String() != "" {
 		workPath = cmd.Flag("workpath").Value.String() + "/" + repo
 	}
