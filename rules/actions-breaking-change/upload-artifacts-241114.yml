@@ -1,0 +1,9 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/ast-grep/ast-grep/main/schemas/rule.json
+id: upload-artifacts-241114
+language: yml
+rule: {pattern: "uses: $NAME"}
+constraints: {NAME: {regex: ^actions/upload-artifact}}
+fix: "uses: actions/upload-artifact@v4"
+message: "Upgrade the upload-artifact action to v4"
+files:
+  - '**/.github/workflows/**'

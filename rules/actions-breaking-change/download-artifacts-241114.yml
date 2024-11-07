@@ -1,0 +1,9 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/ast-grep/ast-grep/main/schemas/rule.json
+id: download-artifacts-250117
+language: yml
+rule: {pattern: "uses: $NAME"}
+constraints: {NAME: {regex: ^actions/download-artifact}}
+fix: "uses: actions/download-artifact@v4"
+message: "Upgrade the download-artifact action to v4"
+files:
+  - '**/.github/workflows/**'

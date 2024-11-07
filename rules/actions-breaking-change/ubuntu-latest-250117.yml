@@ -1,0 +1,8 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/ast-grep/ast-grep/main/schemas/rule.json
+id: ubuntu-latest-250117
+language: yml
+rule: {pattern: "runs-on: ubuntu-latest"}
+fix: "runs-on: ubuntu-24.04"
+message: "Ubuntu-latest upcoming breaking changes"
+files:
+  - '**/.github/workflows/**'
