@@ -216,14 +216,14 @@ func execSemgrep(semgrepOption string, titleTemplate *string, bodyTemplate *stri
 }
 
 func init() {
-	rootCmd.Flags().StringP("repo", "r", "", "リポジトリ名 (カンマ区切りで複数指定可能)")
+	rootCmd.Flags().StringP("repo", "r", "", "Specify repository name (multiple repositories can be specified with comma separation)")
 	rootCmd.MarkFlagRequired("repo")
-	rootCmd.Flags().BoolP("force", "f", false, "cacheを削除して再取得します")
-	rootCmd.Flags().StringP("cmd", "c", "", "引数にあるコマンドを実行します")
-	rootCmd.Flags().StringP("sh", "s", "", "引数にあるシェルスクリプトファイルを実行します")
-	rootCmd.Flags().StringP("astgrep", "a", "", "引数にあるymlファイルをast-grepとして実行します")
-	rootCmd.Flags().StringP("semgrep", "g", "", "引数にあるymlファイルをsemgrepとして実行します")
-	rootCmd.Flags().String("open", "", "作成したPRをブラウザで開きます")
-	rootCmd.Flags().String("with-dev", "", "作成したPRをgithub.devで開きます")
-	rootCmd.Flags().StringP("workpath", "w", "", "作業ディレクトリのパスを指定します")
+	rootCmd.Flags().BoolP("force", "f", false, "Delete cache and re-fetch")
+	rootCmd.Flags().StringP("cmd", "c", "", "Execute the command provided as an argument")
+	rootCmd.Flags().StringP("sh", "s", "", "Execute the shell script file provided as an argument")
+	rootCmd.Flags().StringP("astgrep", "a", "", "Execute the yml file provided as an argument as ast-grep")
+	rootCmd.Flags().StringP("semgrep", "g", "", "Execute the yml file provided as an argument as semgrep")
+	rootCmd.Flags().String("open", "", "Open the created PR in the browser")
+	rootCmd.Flags().String("with-dev", "", "Open the created PR in github.dev")
+	rootCmd.Flags().StringP("workpath", "w", "", "Specify the path of the working directory")
 }
