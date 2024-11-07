@@ -119,6 +119,11 @@ func processRepo(repo string, cmd *cobra.Command) {
 		log.Fatalf("Failed to push changes: %v", err)
 	}
 
+	// set static title if flag exists
+	if cmd.Flag("title").Value.String() != "" {
+		titleTemplate = cmd.Flag("title").Value.String()
+	}
+
 	// create PR
 	prArgs := []string{
 		"pr",
@@ -226,4 +231,5 @@ func init() {
 	rootCmd.Flags().String("open", "", "Open the created PR in the browser")
 	rootCmd.Flags().String("with-dev", "", "Open the created PR in github.dev")
 	rootCmd.Flags().StringP("workpath", "w", "", "Specify the path of the working directory")
+	rootCmd.Flags().StringP("title", "t", "", "Specify the title of the PR")
 }
