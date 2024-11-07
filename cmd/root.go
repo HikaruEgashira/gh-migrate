@@ -18,8 +18,8 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:   "gh-migrate",
-	Short: "PRを作成します",
-	Long:  `PRを作成します`,
+	Short: "Creates a PR",
+	Long:  `Creates a PR`,
 	Run: func(cmd *cobra.Command, args []string) {
 		repos := strings.Split(cmd.Flag("repo").Value.String(), ",")
 		var wg sync.WaitGroup
