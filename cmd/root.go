@@ -1,6 +1,3 @@
-/*
-Copyright © 2024 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -23,20 +20,28 @@ var rootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		repos := strings.Split(cmd.Flag("repo").Value.String(), ",")
 		var wg sync.WaitGroup
+		errChan := make(chan error, len(repos))
 
 		for _, repo := range repos {
 			wg.Add(1)
 			go func(repo string) {
 				defer wg.Done()
-				processRepo(repo, cmd)
+				if err := processRepo(repo, cmd); err != nil {
+					errChan <- fmt.Errorf("error processing repo %s: %w", repo, err)
+				}
 			}(repo)
 		}
 
 		wg.Wait()
+		close(errChan)
+
+		for err := range errChan {
+			log.Println(err)
+		}
 	},
 }
 
-func processRepo(repo string, cmd *cobra.Command) {
+func processRepo(repo string, cmd *cobra.Command) error {
 	workPath := os.Getenv("HOME") + "/.gh-migrate/" + repo
 	if cmd.Flag("workpath").Value.String() != "" {
 		workPath = cmd.Flag("workpath").Value.String() + "/" + repo
@@ -53,7 +58,7 @@ func processRepo(repo string, cmd *cobra.Command) {
 	if force == "true" {
 		err := os.RemoveAll(workPath)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 	}
 
@@ -62,7 +67,7 @@ func processRepo(repo string, cmd *cobra.Command) {
 		cloneArgs := []string{"repo", "clone", repo, workPath, "--", "--depth=1"}
 		_, _, err = gh.Exec(cloneArgs...)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 		fmt.Printf("Repository cloned: %s\n", repo)
 	}
@@ -75,48 +80,56 @@ func processRepo(repo string, cmd *cobra.Command) {
 	// exec command
 	cmdOption := cmd.Flag("cmd").Value.String()
 	if cmdOption != "" {
-		execCommand(cmdOption, &titleTemplate, &bodyTemplate)
+		if err := execCommand(cmdOption, &titleTemplate, &bodyTemplate); err != nil {
+			return err
+		}
 	}
 	shOption := cmd.Flag("sh").Value.String()
 	if shOption != "" {
-		execShellScript(shOption, &titleTemplate, &bodyTemplate, currentPath)
+		if err := execShellScript(shOption, &titleTemplate, &bodyTemplate, currentPath); err != nil {
+			return err
+		}
 	}
 	astgrepOption := cmd.Flag("astgrep").Value.String()
 	if astgrepOption != "" {
-		execAstGrep(astgrepOption, &titleTemplate, &bodyTemplate, currentPath)
+		if err := execAstGrep(astgrepOption, &titleTemplate, &bodyTemplate, currentPath); err != nil {
+			return err
+		}
 	}
 	semgrepOption := cmd.Flag("semgrep").Value.String()
 	if semgrepOption != "" {
-		execSemgrep(semgrepOption, &titleTemplate, &bodyTemplate, currentPath)
+		if err := execSemgrep(semgrepOption, &titleTemplate, &bodyTemplate, currentPath); err != nil {
+			return err
+		}
 	}
 
 	// create branch
 	err = exec.Command("git", "switch", "--create", branchNameTemplate).Run()
 	if err != nil {
-		log.Fatalf("Failed to create branch: %v", err)
+		return fmt.Errorf("failed to create branch: %v", err)
 	}
 	err = exec.Command("git", "add", ".").Run()
 	if err != nil {
-		log.Fatalf("Failed to add changes: %v", err)
+		return fmt.Errorf("failed to add changes: %v", err)
 	}
 	statusOutput, err := exec.Command("git", "status", "--porcelain").Output()
 	if err != nil {
-		log.Fatalf("Failed to get git status: %v", err)
+		return fmt.Errorf("failed to get git status: %v", err)
 	}
 	fmt.Println("Git status output:", string(statusOutput))
 	if len(statusOutput) == 0 {
 		fmt.Println("No changes to commit. Exiting.")
-		return
+		return nil
 	}
 
 	commitArgs := []string{"commit", "-m", titleTemplate}
 	err = exec.Command("git", commitArgs...).Run()
 	if err != nil {
-		log.Fatalf("Failed to commit changes: %v", err)
+		return fmt.Errorf("failed to commit changes: %v", err)
 	}
 	err = exec.Command("git", "push", "-u", "origin", branchNameTemplate).Run()
 	if err != nil {
-		log.Fatalf("Failed to push changes: %v", err)
+		return fmt.Errorf("failed to push changes: %v", err)
 	}
 
 	// set static title if flag exists
@@ -137,7 +150,7 @@ func processRepo(repo string, cmd *cobra.Command) {
 	stdout, stderr, err := gh.Exec(prArgs...)
 	if err != nil {
 		fmt.Println("PR creation error:", stderr.String())
-		log.Fatal(err)
+		return err
 	}
 	fmt.Println(stdout.String())
 
@@ -148,6 +161,8 @@ func processRepo(repo string, cmd *cobra.Command) {
 	if cmd.Flag("with-dev").Value.String() != "" {
 		exec.Command("open", strings.ReplaceAll(stdout.String(), "com/", "dev/")).Run()
 	}
+
+	return nil
 }
 
 func Execute() {
@@ -157,22 +172,23 @@ func Execute() {
 	}
 }
 
-func execCommand(cmdOption string, titleTemplate *string, bodyTemplate *string) {
+func execCommand(cmdOption string, titleTemplate *string, bodyTemplate *string) error {
 	*titleTemplate = *titleTemplate + " run " + cmdOption
 	*bodyTemplate = *bodyTemplate + "\n" + cmdOption
 
 	runOutput, err := exec.Command("sh", "-c", cmdOption).CombinedOutput()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	fmt.Println(string(runOutput))
+	return nil
 }
 
-func execShellScript(shOption string, titleTemplate *string, bodyTemplate *string, currentPath string) {
+func execShellScript(shOption string, titleTemplate *string, bodyTemplate *string, currentPath string) error {
 	scriptFile := "__migrate.sh"
 	scriptContent, err := os.ReadFile(currentPath + "/" + shOption)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	*titleTemplate = *titleTemplate + " run " + shOption
@@ -181,17 +197,18 @@ func execShellScript(shOption string, titleTemplate *string, bodyTemplate *strin
 	os.WriteFile(scriptFile, scriptContent, 0755)
 	runOutput, err := exec.Command("sh", scriptFile).CombinedOutput()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	fmt.Println(string(runOutput))
 
 	exec.Command("rm", scriptFile).Run()
+	return nil
 }
 
-func execAstGrep(astgrepOption string, titleTemplate *string, bodyTemplate *string, currentPath string) {
+func execAstGrep(astgrepOption string, titleTemplate *string, bodyTemplate *string, currentPath string) error {
 	scriptContent, err := os.ReadFile(currentPath + "/" + astgrepOption)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	*titleTemplate = *titleTemplate + " run astgrep " + astgrepOption
@@ -199,15 +216,16 @@ func execAstGrep(astgrepOption string, titleTemplate *string, bodyTemplate *stri
 
 	runOutput, err := exec.Command("sg", "scan", "-r", currentPath+"/"+astgrepOption, "--no-ignore", "hidden", "-U").CombinedOutput()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	fmt.Println(string(runOutput))
+	return nil
 }
 
-func execSemgrep(semgrepOption string, titleTemplate *string, bodyTemplate *string, currentPath string) {
+func execSemgrep(semgrepOption string, titleTemplate *string, bodyTemplate *string, currentPath string) error {
 	scriptContent, err := os.ReadFile(currentPath + "/" + semgrepOption)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	*titleTemplate = *titleTemplate + " run semgrep " + semgrepOption
@@ -215,9 +233,10 @@ func execSemgrep(semgrepOption string, titleTemplate *string, bodyTemplate *stri
 
 	runOutput, err := exec.Command("semgrep", "--config", currentPath+"/"+semgrepOption).CombinedOutput()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	fmt.Println(string(runOutput))
+	return nil
 }
 
 func init() {
