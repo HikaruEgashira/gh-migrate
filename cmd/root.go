@@ -86,19 +86,19 @@ func processRepo(repo string, cmd *cobra.Command) error {
 	}
 	shOption := cmd.Flag("sh").Value.String()
 	if shOption != "" {
-		if err := execShellScript(shOption, &titleTemplate, &bodyTemplate, currentPath); err != nil {
+		if err := execScript(shOption, &titleTemplate, &bodyTemplate, currentPath, "sh"); err != nil {
 			return err
 		}
 	}
 	astgrepOption := cmd.Flag("astgrep").Value.String()
 	if astgrepOption != "" {
-		if err := execAstGrep(astgrepOption, &titleTemplate, &bodyTemplate, currentPath); err != nil {
+		if err := execScript(astgrepOption, &titleTemplate, &bodyTemplate, currentPath, "astgrep"); err != nil {
 			return err
 		}
 	}
 	semgrepOption := cmd.Flag("semgrep").Value.String()
 	if semgrepOption != "" {
-		if err := execSemgrep(semgrepOption, &titleTemplate, &bodyTemplate, currentPath); err != nil {
+		if err := execScript(semgrepOption, &titleTemplate, &bodyTemplate, currentPath, "semgrep"); err != nil {
 			return err
 		}
 	}
@@ -147,7 +147,7 @@ func processRepo(repo string, cmd *cobra.Command) error {
 		"--body", bodyTemplate,
 		"--repo", repo,
 	}
-	stdout, stderr, err := gh.Exec(prArgs...)
+	stdout, stderr, err = gh.Exec(prArgs...)
 	if err != nil {
 		fmt.Println("PR creation error:", stderr.String())
 		return err
@@ -184,54 +184,25 @@ func execCommand(cmdOption string, titleTemplate *string, bodyTemplate *string) 
 	return nil
 }
 
-func execShellScript(shOption string, titleTemplate *string, bodyTemplate *string, currentPath string) error {
-	scriptFile := "__migrate.sh"
-	scriptContent, err := os.ReadFile(currentPath + "/" + shOption)
+func execScript(scriptOption string, titleTemplate *string, bodyTemplate *string, currentPath string, scriptType string) error {
+	scriptContent, err := os.ReadFile(currentPath + "/" + scriptOption)
 	if err != nil {
 		return err
 	}
 
-	*titleTemplate = *titleTemplate + " run " + shOption
-	*bodyTemplate = *bodyTemplate + "\n" + "```bash\n" + string(scriptContent) + "\n```"
+	*titleTemplate = *titleTemplate + " run " + scriptType + " " + scriptOption
+	*bodyTemplate = *bodyTemplate + "\n" + "```" + scriptType + "\n" + string(scriptContent) + "\n```"
 
-	os.WriteFile(scriptFile, scriptContent, 0755)
-	runOutput, err := exec.Command("sh", scriptFile).CombinedOutput()
-	if err != nil {
-		return err
-	}
-	fmt.Println(string(runOutput))
-
-	exec.Command("rm", scriptFile).Run()
-	return nil
-}
-
-func execAstGrep(astgrepOption string, titleTemplate *string, bodyTemplate *string, currentPath string) error {
-	scriptContent, err := os.ReadFile(currentPath + "/" + astgrepOption)
-	if err != nil {
-		return err
+	var runOutput []byte
+	switch scriptType {
+	case "sh":
+		runOutput, err = exec.Command("sh", currentPath+"/"+scriptOption).CombinedOutput()
+	case "astgrep":
+		runOutput, err = exec.Command("sg", "scan", "-r", currentPath+"/"+scriptOption, "--no-ignore", "hidden", "-U").CombinedOutput()
+	case "semgrep":
+		runOutput, err = exec.Command("semgrep", "--config", currentPath+"/"+scriptOption).CombinedOutput()
 	}
 
-	*titleTemplate = *titleTemplate + " run astgrep " + astgrepOption
-	*bodyTemplate = *bodyTemplate + "\n" + "```yaml\n" + string(scriptContent) + "\n```"
-
-	runOutput, err := exec.Command("sg", "scan", "-r", currentPath+"/"+astgrepOption, "--no-ignore", "hidden", "-U").CombinedOutput()
-	if err != nil {
-		return err
-	}
-	fmt.Println(string(runOutput))
-	return nil
-}
-
-func execSemgrep(semgrepOption string, titleTemplate *string, bodyTemplate *string, currentPath string) error {
-	scriptContent, err := os.ReadFile(currentPath + "/" + semgrepOption)
-	if err != nil {
-		return err
-	}
-
-	*titleTemplate = *titleTemplate + " run semgrep " + semgrepOption
-	*bodyTemplate = *bodyTemplate + "\n" + "```yaml\n" + string(scriptContent) + "\n```"
-
-	runOutput, err := exec.Command("semgrep", "--config", currentPath+"/"+semgrepOption).CombinedOutput()
 	if err != nil {
 		return err
 	}
