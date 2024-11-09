@@ -13,11 +13,32 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	logFile *os.File
+)
+
+func initLog(output string) {
+	var err error
+	if output == "stdout" {
+		log.SetOutput(os.Stdout)
+	} else {
+		logFile, err = os.OpenFile(output, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+		if err != nil {
+			log.Fatalf("Failed to open log file: %v", err)
+		}
+		log.SetOutput(logFile)
+	}
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+}
+
 var rootCmd = &cobra.Command{
 	Use:   "gh-migrate",
 	Short: "Creates a PR",
 	Long:  `Creates a PR`,
 	Run: func(cmd *cobra.Command, args []string) {
+		initLog(cmd.Flag("log-output").Value.String())
+		defer logFile.Close()
+
 		repos := strings.Split(cmd.Flag("repo").Value.String(), ",")
 		var wg sync.WaitGroup
 		errChan := make(chan error, len(repos))
@@ -36,7 +57,7 @@ var rootCmd = &cobra.Command{
 		close(errChan)
 
 		for err := range errChan {
-			log.Println(err)
+			log.Printf("ERROR: %v", err)
 		}
 	},
 }
@@ -69,7 +90,7 @@ func processRepo(repo string, cmd *cobra.Command) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Repository cloned: %s\n", repo)
+		log.Printf("INFO: Repository cloned: %s", repo)
 	}
 	os.Chdir(workPath)
 
@@ -116,9 +137,9 @@ func processRepo(repo string, cmd *cobra.Command) error {
 	if err != nil {
 		return fmt.Errorf("failed to get git status: %v", err)
 	}
-	fmt.Println("Git status output:", string(statusOutput))
+	log.Printf("INFO: Git status output: %s", string(statusOutput))
 	if len(statusOutput) == 0 {
-		fmt.Println("No changes to commit. Exiting.")
+		log.Println("INFO: No changes to commit. Exiting.")
 		return nil
 	}
 
@@ -147,12 +168,12 @@ func processRepo(repo string, cmd *cobra.Command) error {
 		"--body", bodyTemplate,
 		"--repo", repo,
 	}
-	stdout, stderr, err = gh.Exec(prArgs...)
+	stdout, stderr, err := gh.Exec(prArgs...)
 	if err != nil {
-		fmt.Println("PR creation error:", stderr.String())
+		log.Printf("ERROR: PR creation error: %s", stderr.String())
 		return err
 	}
-	fmt.Println(stdout.String())
+	log.Printf("INFO: %s", stdout.String())
 
 	// open PR
 	if cmd.Flag("open").Value.String() != "" {
@@ -168,7 +189,7 @@ func processRepo(repo string, cmd *cobra.Command) error {
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
-		os.Exit(1)
+		log.Fatalf("ERROR: %v", err)
 	}
 }
 
@@ -180,7 +201,7 @@ func execCommand(cmdOption string, titleTemplate *string, bodyTemplate *string) 
 	if err != nil {
 		return err
 	}
-	fmt.Println(string(runOutput))
+	log.Printf("INFO: %s", string(runOutput))
 	return nil
 }
 
@@ -206,7 +227,7 @@ func execScript(scriptOption string, titleTemplate *string, bodyTemplate *string
 	if err != nil {
 		return err
 	}
-	fmt.Println(string(runOutput))
+	log.Printf("INFO: %s", string(runOutput))
 	return nil
 }
 
@@ -222,4 +243,5 @@ func init() {
 	rootCmd.Flags().String("with-dev", "", "Open the created PR in github.dev")
 	rootCmd.Flags().StringP("workpath", "w", "", "Specify the path of the working directory")
 	rootCmd.Flags().StringP("title", "t", "", "Specify the title of the PR")
+	rootCmd.Flags().StringP("log-output", "l", "stdout", "Specify the log output (stdout or file path)")
 }
