@@ -1,6 +1,6 @@
 module github.com/HikaruEgashira/gh-migrate
 
-go 1.21.0
+go 1.21
 
 require (
 	github.com/cli/go-gh/v2 v2.9.0
