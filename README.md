@@ -1,10 +1,10 @@
 <h2 align="center">
-    <p align="center">gh-migrate</p>
+    <p align="center">gh-migrate2</p>
 </h2>
 
 <h3 align="center">
-🔹<a  href="https://github.com/HikaruEgashira/gh-migrate/issues">Report Bug</a> &nbsp; &nbsp;
-🔹<a  href="https://github.com/HikaruEgashira/gh-migrate/issues">Request Feature</a>
+🔹<a  href="https://github.com/HikaruEgashira/gh-migrate2/issues">Report Bug</a> &nbsp; &nbsp;
+🔹<a  href="https://github.com/HikaruEgashira/gh-migrate2/issues">Request Feature</a>
 </h3>
 
 ```bash
@@ -33,15 +33,15 @@ Flags:
 
 ```bash
 # Install
-gh extension install HikaruEgashira/gh-migrate
+gh extension install HikaruEgashira/gh-migrate2
 ```
 
 ### Example1
 
 ```bash
-gh migrate --repo HikaruEgashira/gh-migrate --cmd "sed -i '' 's/gh-migrate/gh-migrate2/g' README.md"
+gh migrate --repo HikaruEgashira/gh-migrate2 --cmd "sed -i '' 's/gh-migrate/gh-migrate2/g' README.md"
 
-https://github.com/HikaruEgashira/gh-migrate/pull/10
+https://github.com/HikaruEgashira/gh-migrate2/pull/10
 ```
 
 ### Example2: GitHub Actionsのactions/checkoutをv4に変更する
