@@ -1,6 +1,9 @@
 package migration
 
 import (
+	"bytes"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -11,7 +14,7 @@ import (
 	"github.com/HikaruEgashira/gh-migrate/scripts"
 	gh "github.com/cli/go-gh/v2"
 	"github.com/spf13/cobra"
-)
+	"github.com/cli/go-gh/v2/pkg/api")
 
 func ExecuteMigration(repo string, cmd *cobra.Command) error {
 	workPath := os.Getenv("HOME") + "/.gh-migrate/" + repo
@@ -45,9 +48,21 @@ func ExecuteMigration(repo string, cmd *cobra.Command) error {
 	}
 	os.Chdir(workPath)
 
-	// get default branch
+	// get default branch and its SHA
 	stdout, _, _ := gh.Exec("repo", "view", "--json", "defaultBranchRef", "-q", ".defaultBranchRef.name")
 	defaultBranch := strings.TrimSpace(stdout.String())
+	
+	// get default branch SHA
+	stdout, _, _ = gh.Exec("api", fmt.Sprintf("repos/%s/git/refs/heads/%s", repo, defaultBranch))
+	var refResponse struct {
+		Object struct {
+			SHA string `json:"sha"`
+		} `json:"object"`
+	}
+	if err := json.Unmarshal([]byte(stdout.String()), &refResponse); err != nil {
+		return fmt.Errorf("failed to parse default branch SHA: %v", err)
+	}
+	defaultBranchSHA := refResponse.Object.SHA
 
 	// exec command
 	cmdOption := cmd.Flag("cmd").Value.String()
@@ -75,34 +90,47 @@ func ExecuteMigration(repo string, cmd *cobra.Command) error {
 		}
 	}
 
+	// create commit using GitHub API
+	client, err := api.DefaultRESTClient()
+	if err != nil {
+		return fmt.Errorf("failed to create GitHub client: %v", err)
+	}
+
 	// create branch
-	err = exec.Command("git", "switch", "--create", branchNameTemplate).Run()
+	path := fmt.Sprintf("repos/%s/git/refs", repo)
+	branchPayload := map[string]interface{}{
+		"ref": fmt.Sprintf("refs/heads/%s", branchNameTemplate),
+		"sha": defaultBranchSHA,
+	}
+	branchPayloadBytes, err := json.Marshal(branchPayload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal branch payload: %v", err)
+	}
+	err = client.Post(path, bytes.NewReader(branchPayloadBytes), nil)
 	if err != nil {
 		return fmt.Errorf("failed to create branch: %v", err)
 	}
-	err = exec.Command("git", "add", ".").Run()
-	if err != nil {
-		return fmt.Errorf("failed to add changes: %v", err)
-	}
-	statusOutput, err := exec.Command("git", "status", "--porcelain").Output()
-	if err != nil {
-		return fmt.Errorf("failed to get git status: %v", err)
-	}
-	log.Printf("INFO: Git status output: %s", string(statusOutput))
-	if len(statusOutput) == 0 {
-		log.Println("INFO: No changes to commit. Exiting.")
-		return nil
-	}
 
-	commitArgs := []string{"commit", "-m", titleTemplate}
-	err = exec.Command("git", commitArgs...).Run()
-	if err != nil {
-		return fmt.Errorf("failed to commit changes: %v", err)
+	// create commit
+	path = fmt.Sprintf("repos/%s/contents/test.txt", repo)
+	content := []byte("test\n")
+	encodedContent := make([]byte, base64.StdEncoding.EncodedLen(len(content)))
+	base64.StdEncoding.Encode(encodedContent, content)
+
+	commitPayload := map[string]interface{}{
+		"message": titleTemplate,
+		"branch":  branchNameTemplate,
+		"content": string(encodedContent),
 	}
-	err = exec.Command("git", "push", "-u", "origin", branchNameTemplate).Run()
+	commitPayloadBytes, err := json.Marshal(commitPayload)
 	if err != nil {
-		return fmt.Errorf("failed to push changes: %v", err)
+		return fmt.Errorf("failed to marshal commit payload: %v", err)
 	}
+	err = client.Put(path, bytes.NewReader(commitPayloadBytes), nil)
+	if err != nil {
+		return fmt.Errorf("failed to create commit: %v", err)
+	}
+	log.Printf("INFO: Created commit on branch %s", branchNameTemplate)
 
 	// set static title if flag exists
 	if cmd.Flag("title").Value.String() != "" {
