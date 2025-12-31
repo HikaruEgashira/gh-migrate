@@ -2,19 +2,23 @@ package migration
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/HikaruEgashira/gh-migrate/acp"
 	"github.com/HikaruEgashira/gh-migrate/scripts"
 	gh "github.com/cli/go-gh/v2"
+	"github.com/cli/go-gh/v2/pkg/api"
 	"github.com/spf13/cobra"
-	"github.com/cli/go-gh/v2/pkg/api")
+)
 
 func ExecuteMigration(repo string, cmd *cobra.Command) error {
 	workPath := os.Getenv("HOME") + "/.gh-migrate/" + repo
@@ -107,6 +111,20 @@ func ExecuteMigration(repo string, cmd *cobra.Command) error {
 		}
 	}
 
+	// exec Claude Code with ACP
+	promptOption := cmd.Flag("prompt").Value.String()
+	autoApprove, _ := cmd.Flags().GetBool("auto-approve")
+	if promptOption != "" {
+		titleTemplate = titleTemplate + " claude: " + promptOption
+		bodyTemplate = bodyTemplate + "\n### Claude Code Prompt\n" + promptOption
+
+		ctx := context.Background()
+		if err := acp.RunClaudeSession(ctx, workPath, promptOption, autoApprove); err != nil {
+			return fmt.Errorf("Claude Code execution failed: %w", err)
+		}
+		log.Printf("INFO: Claude Code session completed")
+	}
+
 	// create commit using GitHub API
 	client, err := api.DefaultRESTClient()
 	if err != nil {
@@ -128,26 +146,60 @@ func ExecuteMigration(repo string, cmd *cobra.Command) error {
 		return fmt.Errorf("failed to create branch: %v", err)
 	}
 
-	// create commit
-	path = fmt.Sprintf("repos/%s/contents/test.txt", repo)
-	content := []byte("test\n")
-	encodedContent := make([]byte, base64.StdEncoding.EncodedLen(len(content)))
-	base64.StdEncoding.Encode(encodedContent, content)
+	// detect changed files and create commits
+	changedFiles, err := getChangedFiles(workPath)
+	if err != nil {
+		return fmt.Errorf("failed to detect changed files: %w", err)
+	}
 
-	commitPayload := map[string]interface{}{
-		"message": titleTemplate,
-		"branch":  branchNameTemplate,
-		"content": string(encodedContent),
+	if len(changedFiles) == 0 {
+		log.Printf("WARN: No changes detected, skipping PR creation")
+		return nil
 	}
-	commitPayloadBytes, err := json.Marshal(commitPayload)
-	if err != nil {
-		return fmt.Errorf("failed to marshal commit payload: %v", err)
+
+	log.Printf("INFO: Detected %d changed files", len(changedFiles))
+
+	for _, file := range changedFiles {
+		filePath := filepath.Join(workPath, file)
+		content, err := os.ReadFile(filePath)
+		if err != nil {
+			return fmt.Errorf("failed to read file %s: %w", file, err)
+		}
+
+		encodedContent := base64.StdEncoding.EncodeToString(content)
+
+		// check if file exists to get SHA for update
+		var existingSHA *string
+		apiPath := fmt.Sprintf("repos/%s/contents/%s", repo, file)
+		var fileInfo struct {
+			SHA string `json:"sha"`
+		}
+		if err := client.Get(apiPath+"?ref="+defaultBranch, &fileInfo); err == nil {
+			existingSHA = &fileInfo.SHA
+		}
+
+		commitPayload := map[string]interface{}{
+			"message": titleTemplate,
+			"branch":  branchNameTemplate,
+			"content": encodedContent,
+		}
+		if existingSHA != nil {
+			commitPayload["sha"] = *existingSHA
+		}
+
+		commitPayloadBytes, err := json.Marshal(commitPayload)
+		if err != nil {
+			return fmt.Errorf("failed to marshal commit payload: %v", err)
+		}
+
+		err = client.Put(apiPath, bytes.NewReader(commitPayloadBytes), nil)
+		if err != nil {
+			return fmt.Errorf("failed to commit file %s: %v", file, err)
+		}
+		log.Printf("INFO: Committed file: %s", file)
 	}
-	err = client.Put(path, bytes.NewReader(commitPayloadBytes), nil)
-	if err != nil {
-		return fmt.Errorf("failed to create commit: %v", err)
-	}
-	log.Printf("INFO: Created commit on branch %s", branchNameTemplate)
+
+	log.Printf("INFO: Created commits on branch %s", branchNameTemplate)
 
 	// set static title if flag exists
 	if cmd.Flag("title").Value.String() != "" {
@@ -180,4 +232,37 @@ func ExecuteMigration(repo string, cmd *cobra.Command) error {
 	}
 
 	return nil
+}
+
+func getChangedFiles(workPath string) ([]string, error) {
+	cmd := exec.Command("git", "status", "--porcelain")
+	cmd.Dir = workPath
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("git status failed: %w", err)
+	}
+
+	var files []string
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		if len(line) < 3 {
+			continue
+		}
+		status := line[:2]
+		file := strings.TrimSpace(line[3:])
+		if file == "" {
+			continue
+		}
+		// handle renamed files (R status shows "old -> new")
+		if strings.Contains(file, " -> ") {
+			parts := strings.Split(file, " -> ")
+			file = parts[len(parts)-1]
+		}
+		// include modified, added, renamed files (exclude deleted)
+		if status[0] != 'D' && status[1] != 'D' {
+			files = append(files, file)
+		}
+	}
+
+	return files, nil
 }

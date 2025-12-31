@@ -47,6 +47,9 @@ var rootCmd = &cobra.Command{
 4. semgrepを使用してPRを作成する:
    gh migrate --repo HikaruEgashira/gh-migrate --semgrep rules/security-check.yml
 
+5. Claude Codeを使用してPRを作成する:
+   gh migrate --repo HikaruEgashira/gh-migrate --prompt "README.mdを英語に翻訳して"
+
 詳細な使用例やフラグの説明については、READMEをご覧ください。`,
 	Run: func(cmd *cobra.Command, args []string) {
 		initLog(cmd.Flag("log-output").Value.String())
@@ -95,4 +98,6 @@ func init() {
 	rootCmd.Flags().StringP("workpath", "w", "", "Specify the path of the working directory")
 	rootCmd.Flags().StringP("title", "t", "", "Specify the title of the PR")
 	rootCmd.Flags().StringP("log-output", "l", "stdout", "Specify the log output (stdout or file path)")
+	rootCmd.Flags().StringP("prompt", "P", "", "Execute Claude Code with the prompt provided as an argument")
+	rootCmd.Flags().Bool("auto-approve", false, "Auto-approve permission requests from Claude Code")
 }
