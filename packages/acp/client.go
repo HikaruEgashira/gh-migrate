@@ -10,7 +10,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/HikaruEgashira/gh-migrate/tui"
+	"github.com/HikaruEgashira/gh-migrate/packages/tui"
 	"github.com/coder/acp-go-sdk"
 )
 

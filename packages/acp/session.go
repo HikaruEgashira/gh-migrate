@@ -6,7 +6,7 @@ import (
 	"io"
 	"os/exec"
 
-	"github.com/HikaruEgashira/gh-migrate/tui"
+	"github.com/HikaruEgashira/gh-migrate/packages/tui"
 	"github.com/coder/acp-go-sdk"
 )
 

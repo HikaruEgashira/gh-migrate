@@ -1,12 +1,12 @@
-package cmd
+package cli
 
 import (
 	"fmt"
 	"strings"
 	"sync"
 
-	"github.com/HikaruEgashira/gh-migrate/migration"
-	"github.com/HikaruEgashira/gh-migrate/tui"
+	"github.com/HikaruEgashira/gh-migrate/packages/migration"
+	"github.com/HikaruEgashira/gh-migrate/packages/tui"
 	"github.com/spf13/cobra"
 )
 

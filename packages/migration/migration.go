@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/HikaruEgashira/gh-migrate/acp"
-	"github.com/HikaruEgashira/gh-migrate/scripts"
-	"github.com/HikaruEgashira/gh-migrate/tui"
+	"github.com/HikaruEgashira/gh-migrate/packages/acp"
+	"github.com/HikaruEgashira/gh-migrate/packages/scripts"
+	"github.com/HikaruEgashira/gh-migrate/packages/tui"
 	gh "github.com/cli/go-gh/v2"
 	"github.com/spf13/cobra"
 )
