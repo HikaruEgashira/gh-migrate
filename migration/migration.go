@@ -58,10 +58,9 @@ func ExecuteMigration(repo string, cmd *cobra.Command) error {
 		return fmt.Errorf("failed to fetch latest: %v", err)
 	}
 
-	// Checkout and reset to latest default branch
-	checkoutCmd := exec.Command("git", "checkout", defaultBranch)
-	if err := checkoutCmd.Run(); err != nil {
-		return fmt.Errorf("failed to checkout default branch: %v", err)
+	switchCmd := exec.Command("git", "switch", defaultBranch)
+	if err := switchCmd.Run(); err != nil {
+		return fmt.Errorf("failed to switch to default branch: %v", err)
 	}
 
 	resetCmd := exec.Command("git", "reset", "--hard", "origin/"+defaultBranch)
