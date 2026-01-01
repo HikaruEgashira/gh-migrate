@@ -3,17 +3,21 @@ package acp
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
+	tea "github.com/charmbracelet/bubbletea"
+
+	"github.com/HikaruEgashira/gh-migrate/tui"
 	"github.com/coder/acp-go-sdk"
 )
 
 type MigrationClient struct {
 	AutoApprove bool
 	WorkDir     string
+	TUI         *tui.Model
+	Program     *tea.Program
 }
 
 var _ acp.Client = (*MigrationClient)(nil)
@@ -25,7 +29,7 @@ func (c *MigrationClient) RequestPermission(ctx context.Context, params acp.Requ
 	}
 
 	if c.AutoApprove {
-		log.Printf("[ACP] Auto-approving permission: %s", title)
+		c.sendUpdate("output", "", "", fmt.Sprintf("auto-approved: %s", title))
 		for _, o := range params.Options {
 			if o.Kind == acp.PermissionOptionKindAllowOnce || o.Kind == acp.PermissionOptionKindAllowAlways {
 				return acp.RequestPermissionResponse{
@@ -44,7 +48,7 @@ func (c *MigrationClient) RequestPermission(ctx context.Context, params acp.Requ
 		}
 	}
 
-	log.Printf("[ACP] Permission denied (not auto-approved): %s", title)
+	c.sendUpdate("output", "", "", fmt.Sprintf("permission denied: %s", title))
 	return acp.RequestPermissionResponse{
 		Outcome: acp.RequestPermissionOutcome{
 			Cancelled: &acp.RequestPermissionOutcomeCancelled{},
@@ -58,19 +62,29 @@ func (c *MigrationClient) SessionUpdate(ctx context.Context, params acp.SessionN
 	case u.AgentMessageChunk != nil:
 		content := u.AgentMessageChunk.Content
 		if content.Text != nil {
-			log.Printf("[Claude] %s", content.Text.Text)
+			c.sendUpdate("output", "", "", content.Text.Text)
 		}
 	case u.ToolCall != nil:
-		log.Printf("[Tool] %s (%s)", u.ToolCall.Title, u.ToolCall.Status)
+		c.sendUpdate("tool", u.ToolCall.Title, string(u.ToolCall.Status), "")
 	case u.ToolCallUpdate != nil:
-		log.Printf("[Tool] %s: %v", u.ToolCallUpdate.ToolCallId, u.ToolCallUpdate.Status)
+		status := ""
+		if u.ToolCallUpdate.Status != nil {
+			status = string(*u.ToolCallUpdate.Status)
+		}
+		c.sendUpdate("tool_update", "", status, "")
 	case u.AgentThoughtChunk != nil:
 		thought := u.AgentThoughtChunk.Content
 		if thought.Text != nil {
-			log.Printf("[Thought] %s", thought.Text.Text)
+			c.sendUpdate("thought", "", "", thought.Text.Text)
 		}
 	}
 	return nil
+}
+
+func (c *MigrationClient) sendUpdate(msgType, title, status, content string) {
+	if c.TUI != nil && c.Program != nil {
+		c.TUI.SendUpdate(c.Program, msgType, title, status, content)
+	}
 }
 
 func (c *MigrationClient) WriteTextFile(ctx context.Context, params acp.WriteTextFileRequest) (acp.WriteTextFileResponse, error) {
@@ -88,7 +102,7 @@ func (c *MigrationClient) WriteTextFile(ctx context.Context, params acp.WriteTex
 	if err := os.WriteFile(path, []byte(params.Content), 0o644); err != nil {
 		return acp.WriteTextFileResponse{}, fmt.Errorf("write %s: %w", path, err)
 	}
-	log.Printf("[ACP] Wrote %d bytes to %s", len(params.Content), path)
+	c.sendUpdate("output", "", "", fmt.Sprintf("wrote %s", filepath.Base(path)))
 	return acp.WriteTextFileResponse{}, nil
 }
 
@@ -119,12 +133,11 @@ func (c *MigrationClient) ReadTextFile(ctx context.Context, params acp.ReadTextF
 		content = strings.Join(lines[start:end], "\n")
 	}
 
-	log.Printf("[ACP] ReadTextFile: %s (%d bytes)", path, len(content))
+	c.sendUpdate("output", "", "", fmt.Sprintf("read %s", filepath.Base(path)))
 	return acp.ReadTextFileResponse{Content: content}, nil
 }
 
 func (c *MigrationClient) CreateTerminal(ctx context.Context, params acp.CreateTerminalRequest) (acp.CreateTerminalResponse, error) {
-	log.Printf("[ACP] CreateTerminal requested (not supported)")
 	return acp.CreateTerminalResponse{TerminalId: "term-stub"}, nil
 }
 
