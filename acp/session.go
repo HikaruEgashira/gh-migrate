@@ -72,7 +72,13 @@ func RunClaudeSession(ctx context.Context, workDir string, prompt string, autoAp
 	// Wrap user prompt with PR body generation instruction
 	wrappedPrompt := prompt + `
 
-After completing the task above, please provide a brief summary of what you did for the PR description. Start the summary with "## Summary" and keep it concise (2-3 sentences).`
+After completing the task, output ONLY a PR description. Your entire response must start with "## Summary" - no other text before it.
+
+Example output format:
+## Summary
+Add .prettierrc configuration file for consistent code formatting across the project.
+
+Your turn - write the summary for this task:`
 
 	_, err = conn.Prompt(ctx, acp.PromptRequest{
 		SessionId: newSess.SessionId,
