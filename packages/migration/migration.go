@@ -26,26 +26,25 @@ func ExecuteMigration(repo string, cmd *cobra.Command, ui *tui.UI) error {
 	bodyTemplate := ``
 	branchNameTemplate := "gh-migrate-" + time.Now().Format("20060102150405")
 
-	force := cmd.Flag("force").Value.String()
-
-	if force == "true" {
-		err := os.RemoveAll(workPath)
-		if err != nil {
-			return err
-		}
-	}
-
-	_, err := os.Stat(workPath)
-	if err != nil {
-		ui.Step("clone " + repo)
-		cloneArgs := []string{"repo", "clone", repo, workPath, "--", "--depth=1"}
-		_, _, err = gh.Exec(cloneArgs...)
-		if err != nil {
+	// 既存のディレクトリがあれば削除（statelessな実行のため）
+	if _, err := os.Stat(workPath); err == nil {
+		ui.Step("remove existing workdir")
+		if err := os.RemoveAll(workPath); err != nil {
 			ui.StepError()
-			return err
+			return fmt.Errorf("failed to remove existing workdir: %w", err)
 		}
 		ui.StepDone()
 	}
+
+	// 毎回新しくclone
+	ui.Step("clone " + repo)
+	cloneArgs := []string{"repo", "clone", repo, workPath, "--", "--depth=1"}
+	_, _, err := gh.Exec(cloneArgs...)
+	if err != nil {
+		ui.StepError()
+		return err
+	}
+	ui.StepDone()
 	os.Chdir(workPath)
 
 	// get default branch
