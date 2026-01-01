@@ -84,15 +84,21 @@ func ExecuteMigration(repo string, cmd *cobra.Command, ui *tui.UI) error {
 	autoApprove, _ := cmd.Flags().GetBool("auto-approve")
 	if promptOption != "" {
 		titleTemplate = titleTemplate + " claude: " + promptOption
-		bodyTemplate = bodyTemplate + "\n### Claude Code Prompt\n" + promptOption
 
 		ui.Step("claude code")
 		ctx := context.Background()
-		if err := acp.RunClaudeSession(ctx, workPath, promptOption, autoApprove, ui); err != nil {
+		result, err := acp.RunClaudeSession(ctx, workPath, promptOption, autoApprove, ui)
+		if err != nil {
 			ui.StepError()
 			return fmt.Errorf("Claude Code execution failed: %w", err)
 		}
 		ui.StepDone()
+
+		// Add Claude's response to PR body
+		if result != nil && result.AgentResponse != "" {
+			bodyTemplate = bodyTemplate + "\n" + result.AgentResponse
+		}
+		bodyTemplate = bodyTemplate + "\n\n### Prompt\n```\n" + promptOption + "\n```"
 	}
 
 	// detect changed files
@@ -107,6 +113,13 @@ func ExecuteMigration(repo string, cmd *cobra.Command, ui *tui.UI) error {
 	}
 
 	ui.Log("%d file(s) changed", len(changedFiles))
+
+	// Add deterministic PR description with file changes
+	bodyTemplate = bodyTemplate + "\n\n---\n### Changed Files\n"
+	for _, f := range changedFiles {
+		bodyTemplate = bodyTemplate + "- `" + f + "`\n"
+	}
+	bodyTemplate = bodyTemplate + fmt.Sprintf("\n*Generated at: %s*", time.Now().Format(time.RFC3339))
 
 	// create branch locally
 	ui.Step("create branch")

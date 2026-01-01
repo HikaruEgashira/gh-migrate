@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -14,13 +15,22 @@ import (
 )
 
 type MigrationClient struct {
-	AutoApprove bool
-	WorkDir     string
-	TUI         *tui.Model
-	Program     *tea.Program
+	AutoApprove   bool
+	WorkDir       string
+	TUI           *tui.Model
+	Program       *tea.Program
+	AgentMessages strings.Builder
+	mu            sync.Mutex
 }
 
 var _ acp.Client = (*MigrationClient)(nil)
+
+// GetAgentResponse returns the accumulated agent response messages
+func (c *MigrationClient) GetAgentResponse() string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.AgentMessages.String()
+}
 
 func (c *MigrationClient) RequestPermission(ctx context.Context, params acp.RequestPermissionRequest) (acp.RequestPermissionResponse, error) {
 	title := ""
@@ -63,6 +73,9 @@ func (c *MigrationClient) SessionUpdate(ctx context.Context, params acp.SessionN
 		content := u.AgentMessageChunk.Content
 		if content.Text != nil {
 			c.sendUpdate("output", "", "", content.Text.Text)
+			c.mu.Lock()
+			c.AgentMessages.WriteString(content.Text.Text)
+			c.mu.Unlock()
 		}
 	case u.ToolCall != nil:
 		c.sendUpdate("tool", u.ToolCall.Title, string(u.ToolCall.Status), "")
