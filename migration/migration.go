@@ -1,22 +1,21 @@
 package migration
 
 import (
-	"bytes"
-	"encoding/base64"
-	"encoding/json"
+	"context"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
 
+	"github.com/HikaruEgashira/gh-migrate/acp"
 	"github.com/HikaruEgashira/gh-migrate/scripts"
+	"github.com/HikaruEgashira/gh-migrate/tui"
 	gh "github.com/cli/go-gh/v2"
 	"github.com/spf13/cobra"
-	"github.com/cli/go-gh/v2/pkg/api")
+)
 
-func ExecuteMigration(repo string, cmd *cobra.Command) error {
+func ExecuteMigration(repo string, cmd *cobra.Command, ui *tui.UI) error {
 	workPath := os.Getenv("HOME") + "/.gh-migrate/" + repo
 	if cmd.Flag("workpath").Value.String() != "" {
 		workPath = cmd.Flag("workpath").Value.String() + "/" + repo
@@ -39,47 +38,20 @@ func ExecuteMigration(repo string, cmd *cobra.Command) error {
 
 	_, err := os.Stat(workPath)
 	if err != nil {
+		ui.Step("clone " + repo)
 		cloneArgs := []string{"repo", "clone", repo, workPath, "--", "--depth=1"}
 		_, _, err = gh.Exec(cloneArgs...)
 		if err != nil {
+			ui.StepError()
 			return err
 		}
-		log.Printf("INFO: Repository cloned: %s", repo)
+		ui.StepDone()
 	}
 	os.Chdir(workPath)
 
-	// Initialize: fetch latest and reset to default branch
+	// get default branch
 	stdout, _, _ := gh.Exec("repo", "view", "--json", "defaultBranchRef", "-q", ".defaultBranchRef.name")
 	defaultBranch := strings.TrimSpace(stdout.String())
-
-	// Fetch latest from remote
-	fetchCmd := exec.Command("git", "fetch", "origin", defaultBranch)
-	if err := fetchCmd.Run(); err != nil {
-		return fmt.Errorf("failed to fetch latest: %v", err)
-	}
-
-	switchCmd := exec.Command("git", "switch", defaultBranch)
-	if err := switchCmd.Run(); err != nil {
-		return fmt.Errorf("failed to switch to default branch: %v", err)
-	}
-
-	resetCmd := exec.Command("git", "reset", "--hard", "origin/"+defaultBranch)
-	if err := resetCmd.Run(); err != nil {
-		return fmt.Errorf("failed to reset to latest: %v", err)
-	}
-	log.Printf("INFO: Reset to latest %s", defaultBranch)
-
-	// get default branch SHA
-	stdout, _, _ = gh.Exec("api", fmt.Sprintf("repos/%s/git/refs/heads/%s", repo, defaultBranch))
-	var refResponse struct {
-		Object struct {
-			SHA string `json:"sha"`
-		} `json:"object"`
-	}
-	if err := json.Unmarshal([]byte(stdout.String()), &refResponse); err != nil {
-		return fmt.Errorf("failed to parse default branch SHA: %v", err)
-	}
-	defaultBranchSHA := refResponse.Object.SHA
 
 	// exec command
 	cmdOption := cmd.Flag("cmd").Value.String()
@@ -107,47 +79,75 @@ func ExecuteMigration(repo string, cmd *cobra.Command) error {
 		}
 	}
 
-	// create commit using GitHub API
-	client, err := api.DefaultRESTClient()
-	if err != nil {
-		return fmt.Errorf("failed to create GitHub client: %v", err)
+	// exec Claude Code with ACP
+	promptOption := cmd.Flag("prompt").Value.String()
+	autoApprove, _ := cmd.Flags().GetBool("auto-approve")
+	if promptOption != "" {
+		titleTemplate = titleTemplate + " claude: " + promptOption
+
+		ui.Step("claude code")
+		ctx := context.Background()
+		result, err := acp.RunClaudeSession(ctx, workPath, promptOption, autoApprove, ui)
+		if err != nil {
+			ui.StepError()
+			return fmt.Errorf("Claude Code execution failed: %w", err)
+		}
+		ui.StepDone()
+
+		// Add Claude's response to PR body
+		if result != nil && result.AgentResponse != "" {
+			bodyTemplate = bodyTemplate + "\n" + result.AgentResponse
+		}
+		bodyTemplate = bodyTemplate + "\n\n### Prompt\n```\n" + promptOption + "\n```"
 	}
 
-	// create branch
-	path := fmt.Sprintf("repos/%s/git/refs", repo)
-	branchPayload := map[string]interface{}{
-		"ref": fmt.Sprintf("refs/heads/%s", branchNameTemplate),
-		"sha": defaultBranchSHA,
-	}
-	branchPayloadBytes, err := json.Marshal(branchPayload)
+	// detect changed files
+	changedFiles, err := getChangedFiles(workPath)
 	if err != nil {
-		return fmt.Errorf("failed to marshal branch payload: %v", err)
-	}
-	err = client.Post(path, bytes.NewReader(branchPayloadBytes), nil)
-	if err != nil {
-		return fmt.Errorf("failed to create branch: %v", err)
+		return fmt.Errorf("failed to detect changed files: %w", err)
 	}
 
-	// create commit
-	path = fmt.Sprintf("repos/%s/contents/test.txt", repo)
-	content := []byte("test\n")
-	encodedContent := make([]byte, base64.StdEncoding.EncodedLen(len(content)))
-	base64.StdEncoding.Encode(encodedContent, content)
+	if len(changedFiles) == 0 {
+		ui.Log("no changes detected")
+		return nil
+	}
 
-	commitPayload := map[string]interface{}{
-		"message": titleTemplate,
-		"branch":  branchNameTemplate,
-		"content": string(encodedContent),
+	ui.Log("%d file(s) changed", len(changedFiles))
+
+	// Add deterministic PR description with file changes
+	bodyTemplate = bodyTemplate + "\n\n---\n### Changed Files\n"
+	for _, f := range changedFiles {
+		bodyTemplate = bodyTemplate + "- `" + f + "`\n"
 	}
-	commitPayloadBytes, err := json.Marshal(commitPayload)
-	if err != nil {
-		return fmt.Errorf("failed to marshal commit payload: %v", err)
+	bodyTemplate = bodyTemplate + fmt.Sprintf("\n*Generated at: %s*", time.Now().Format(time.RFC3339))
+
+	// create branch locally
+	ui.Step("create branch")
+	if err := runGitCommand(workPath, "checkout", "-b", branchNameTemplate); err != nil {
+		ui.StepError()
+		return fmt.Errorf("failed to create branch: %w", err)
 	}
-	err = client.Put(path, bytes.NewReader(commitPayloadBytes), nil)
-	if err != nil {
-		return fmt.Errorf("failed to create commit: %v", err)
+
+	// stage all changes
+	if err := runGitCommand(workPath, "add", "-A"); err != nil {
+		ui.StepError()
+		return fmt.Errorf("failed to stage changes: %w", err)
 	}
-	log.Printf("INFO: Created commit on branch %s", branchNameTemplate)
+
+	// commit with signing (uses user's git config)
+	if err := runGitCommand(workPath, "commit", "-m", titleTemplate); err != nil {
+		ui.StepError()
+		return fmt.Errorf("failed to commit: %w", err)
+	}
+	ui.StepDone()
+
+	// push to remote
+	ui.Step("push")
+	if err := runGitCommand(workPath, "push", "-u", "origin", branchNameTemplate); err != nil {
+		ui.StepError()
+		return fmt.Errorf("failed to push: %w", err)
+	}
+	ui.StepDone()
 
 	// set static title if flag exists
 	if cmd.Flag("title").Value.String() != "" {
@@ -155,6 +155,7 @@ func ExecuteMigration(repo string, cmd *cobra.Command) error {
 	}
 
 	// create PR
+	ui.Step("create PR")
 	prArgs := []string{
 		"pr",
 		"create",
@@ -166,10 +167,12 @@ func ExecuteMigration(repo string, cmd *cobra.Command) error {
 	}
 	stdout, stderr, err := gh.Exec(prArgs...)
 	if err != nil {
-		log.Printf("ERROR: PR creation error: %s", stderr.String())
+		ui.StepError()
+		ui.Error("PR creation failed: %s", stderr.String())
 		return err
 	}
-	log.Printf("INFO: %s", stdout.String())
+	ui.StepDone()
+	ui.Success(strings.TrimSpace(stdout.String()))
 
 	// open PR
 	if cmd.Flag("open").Value.String() != "" {
@@ -180,4 +183,47 @@ func ExecuteMigration(repo string, cmd *cobra.Command) error {
 	}
 
 	return nil
+}
+
+func runGitCommand(workPath string, args ...string) error {
+	cmd := exec.Command("git", args...)
+	cmd.Dir = workPath
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s: %s", err, string(output))
+	}
+	return nil
+}
+
+func getChangedFiles(workPath string) ([]string, error) {
+	cmd := exec.Command("git", "status", "--porcelain")
+	cmd.Dir = workPath
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("git status failed: %w", err)
+	}
+
+	var files []string
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		if len(line) < 3 {
+			continue
+		}
+		status := line[:2]
+		file := strings.TrimSpace(line[3:])
+		if file == "" {
+			continue
+		}
+		// handle renamed files (R status shows "old -> new")
+		if strings.Contains(file, " -> ") {
+			parts := strings.Split(file, " -> ")
+			file = parts[len(parts)-1]
+		}
+		// include modified, added, renamed files (exclude deleted)
+		if status[0] != 'D' && status[1] != 'D' {
+			files = append(files, file)
+		}
+	}
+
+	return files, nil
 }
