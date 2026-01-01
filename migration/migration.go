@@ -3,7 +3,6 @@ package migration
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -11,11 +10,12 @@ import (
 
 	"github.com/HikaruEgashira/gh-migrate/acp"
 	"github.com/HikaruEgashira/gh-migrate/scripts"
+	"github.com/HikaruEgashira/gh-migrate/tui"
 	gh "github.com/cli/go-gh/v2"
 	"github.com/spf13/cobra"
 )
 
-func ExecuteMigration(repo string, cmd *cobra.Command) error {
+func ExecuteMigration(repo string, cmd *cobra.Command, ui *tui.UI) error {
 	workPath := os.Getenv("HOME") + "/.gh-migrate/" + repo
 	if cmd.Flag("workpath").Value.String() != "" {
 		workPath = cmd.Flag("workpath").Value.String() + "/" + repo
@@ -38,12 +38,14 @@ func ExecuteMigration(repo string, cmd *cobra.Command) error {
 
 	_, err := os.Stat(workPath)
 	if err != nil {
+		ui.Step("clone " + repo)
 		cloneArgs := []string{"repo", "clone", repo, workPath, "--", "--depth=1"}
 		_, _, err = gh.Exec(cloneArgs...)
 		if err != nil {
+			ui.StepError()
 			return err
 		}
-		log.Printf("INFO: Repository cloned: %s", repo)
+		ui.StepDone()
 	}
 	os.Chdir(workPath)
 
@@ -84,11 +86,13 @@ func ExecuteMigration(repo string, cmd *cobra.Command) error {
 		titleTemplate = titleTemplate + " claude: " + promptOption
 		bodyTemplate = bodyTemplate + "\n### Claude Code Prompt\n" + promptOption
 
+		ui.Step("claude code")
 		ctx := context.Background()
-		if err := acp.RunClaudeSession(ctx, workPath, promptOption, autoApprove); err != nil {
+		if err := acp.RunClaudeSession(ctx, workPath, promptOption, autoApprove, ui); err != nil {
+			ui.StepError()
 			return fmt.Errorf("Claude Code execution failed: %w", err)
 		}
-		log.Printf("INFO: Claude Code session completed")
+		ui.StepDone()
 	}
 
 	// detect changed files
@@ -98,33 +102,39 @@ func ExecuteMigration(repo string, cmd *cobra.Command) error {
 	}
 
 	if len(changedFiles) == 0 {
-		log.Printf("WARN: No changes detected, skipping PR creation")
+		ui.Log("no changes detected")
 		return nil
 	}
 
-	log.Printf("INFO: Detected %d changed files", len(changedFiles))
+	ui.Log("%d file(s) changed", len(changedFiles))
 
 	// create branch locally
+	ui.Step("create branch")
 	if err := runGitCommand(workPath, "checkout", "-b", branchNameTemplate); err != nil {
+		ui.StepError()
 		return fmt.Errorf("failed to create branch: %w", err)
 	}
 
 	// stage all changes
 	if err := runGitCommand(workPath, "add", "-A"); err != nil {
+		ui.StepError()
 		return fmt.Errorf("failed to stage changes: %w", err)
 	}
 
 	// commit with signing (uses user's git config)
 	if err := runGitCommand(workPath, "commit", "-m", titleTemplate); err != nil {
+		ui.StepError()
 		return fmt.Errorf("failed to commit: %w", err)
 	}
-	log.Printf("INFO: Created signed commit on branch %s", branchNameTemplate)
+	ui.StepDone()
 
 	// push to remote
+	ui.Step("push")
 	if err := runGitCommand(workPath, "push", "-u", "origin", branchNameTemplate); err != nil {
+		ui.StepError()
 		return fmt.Errorf("failed to push: %w", err)
 	}
-	log.Printf("INFO: Pushed branch %s to remote", branchNameTemplate)
+	ui.StepDone()
 
 	// set static title if flag exists
 	if cmd.Flag("title").Value.String() != "" {
@@ -132,6 +142,7 @@ func ExecuteMigration(repo string, cmd *cobra.Command) error {
 	}
 
 	// create PR
+	ui.Step("create PR")
 	prArgs := []string{
 		"pr",
 		"create",
@@ -143,10 +154,12 @@ func ExecuteMigration(repo string, cmd *cobra.Command) error {
 	}
 	stdout, stderr, err := gh.Exec(prArgs...)
 	if err != nil {
-		log.Printf("ERROR: PR creation error: %s", stderr.String())
+		ui.StepError()
+		ui.Error("PR creation failed: %s", stderr.String())
 		return err
 	}
-	log.Printf("INFO: %s", stdout.String())
+	ui.StepDone()
+	ui.Success(strings.TrimSpace(stdout.String()))
 
 	// open PR
 	if cmd.Flag("open").Value.String() != "" {

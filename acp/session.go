@@ -6,14 +6,11 @@ import (
 	"os"
 	"os/exec"
 
-	tea "github.com/charmbracelet/bubbletea"
-	"golang.org/x/term"
-
 	"github.com/HikaruEgashira/gh-migrate/tui"
 	"github.com/coder/acp-go-sdk"
 )
 
-func RunClaudeSession(ctx context.Context, workDir string, prompt string, autoApprove bool) error {
+func RunClaudeSession(ctx context.Context, workDir string, prompt string, autoApprove bool, ui *tui.UI) error {
 	cmd := exec.CommandContext(ctx, "npx", "-y", "@zed-industries/claude-code-acp@latest")
 	cmd.Dir = workDir
 	cmd.Stderr = os.Stderr
@@ -34,34 +31,15 @@ func RunClaudeSession(ctx context.Context, workDir string, prompt string, autoAp
 		_ = cmd.Process.Kill()
 	}()
 
-	// Check if TTY is available
-	isTTY := term.IsTerminal(int(os.Stderr.Fd()))
-
-	var tuiModel *tui.Model
-	var program *tea.Program
-
-	if isTTY {
-		tuiModel = tui.New("Claude Code")
-		program = tea.NewProgram(tuiModel, tea.WithOutput(os.Stderr))
-	}
-
 	client := &MigrationClient{
 		AutoApprove: autoApprove,
 		WorkDir:     workDir,
-		TUI:         tuiModel,
-		Program:     program,
+		TUI:         ui.GetModel(),
+		Program:     ui.GetProgram(),
 	}
 	conn := acp.NewClientSideConnection(client, stdin, stdout)
 
-	if isTTY {
-		// Run TUI in background
-		go func() {
-			if _, err := program.Run(); err != nil {
-				fmt.Fprintf(os.Stderr, "TUI error: %v\n", err)
-			}
-		}()
-		tuiModel.SendUpdate(program, "status", "", "connecting", "")
-	}
+	ui.Log("connecting to Claude Code...")
 
 	initResp, err := conn.Initialize(ctx, acp.InitializeRequest{
 		ProtocolVersion: acp.ProtocolVersionNumber,
@@ -73,43 +51,26 @@ func RunClaudeSession(ctx context.Context, workDir string, prompt string, autoAp
 		},
 	})
 	if err != nil {
-		if tuiModel != nil {
-			tuiModel.Complete(program)
-		}
 		return fmt.Errorf("initialize error: %w", err)
 	}
-	if tuiModel != nil {
-		tuiModel.SendUpdate(program, "status", "", fmt.Sprintf("connected (v%v)", initResp.ProtocolVersion), "")
-	}
+	ui.Log("connected (v%v)", initResp.ProtocolVersion)
 
 	newSess, err := conn.NewSession(ctx, acp.NewSessionRequest{
 		Cwd:        workDir,
 		McpServers: []acp.McpServer{},
 	})
 	if err != nil {
-		if tuiModel != nil {
-			tuiModel.Complete(program)
-		}
 		return fmt.Errorf("newSession error: %w", err)
 	}
-	if tuiModel != nil {
-		tuiModel.SendUpdate(program, "status", "", "running", "")
-		tuiModel.SendUpdate(program, "output", "", "", fmt.Sprintf("session: %s", newSess.SessionId[:8]))
-	}
+	ui.Log("session: %s", newSess.SessionId[:8])
 
 	_, err = conn.Prompt(ctx, acp.PromptRequest{
 		SessionId: newSess.SessionId,
 		Prompt:    []acp.ContentBlock{acp.TextBlock(prompt)},
 	})
 	if err != nil {
-		if tuiModel != nil {
-			tuiModel.Complete(program)
-		}
 		return fmt.Errorf("prompt error: %w", err)
 	}
 
-	if tuiModel != nil {
-		tuiModel.Complete(program)
-	}
 	return nil
 }

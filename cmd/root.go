@@ -2,32 +2,13 @@ package cmd
 
 import (
 	"fmt"
-	"log"
-	"os"
 	"strings"
 	"sync"
 
 	"github.com/HikaruEgashira/gh-migrate/migration"
+	"github.com/HikaruEgashira/gh-migrate/tui"
 	"github.com/spf13/cobra"
 )
-
-var (
-	logFile *os.File
-)
-
-func initLog(output string) {
-	var err error
-	if output == "stdout" {
-		log.SetOutput(os.Stdout)
-	} else {
-		logFile, err = os.OpenFile(output, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-		if err != nil {
-			log.Fatalf("Failed to open log file: %v", err)
-		}
-		log.SetOutput(logFile)
-	}
-	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
-}
 
 var rootCmd = &cobra.Command{
 	Use:   "gh-migrate",
@@ -52,10 +33,13 @@ var rootCmd = &cobra.Command{
 
 詳細な使用例やフラグの説明については、READMEをご覧ください。`,
 	Run: func(cmd *cobra.Command, args []string) {
-		initLog(cmd.Flag("log-output").Value.String())
-		defer logFile.Close()
-
 		repos := strings.Split(cmd.Flag("repo").Value.String(), ",")
+
+		ui := tui.Init("gh-migrate")
+		defer ui.Done()
+
+		ui.Status(fmt.Sprintf("processing %d repo(s)", len(repos)))
+
 		var wg sync.WaitGroup
 		errChan := make(chan error, len(repos))
 
@@ -63,8 +47,8 @@ var rootCmd = &cobra.Command{
 			wg.Add(1)
 			go func(repo string) {
 				defer wg.Done()
-				if err := migration.ExecuteMigration(repo, cmd); err != nil {
-					errChan <- fmt.Errorf("error processing repo %s: %w", repo, err)
+				if err := migration.ExecuteMigration(repo, cmd, ui); err != nil {
+					errChan <- fmt.Errorf("%s: %w", repo, err)
 				}
 			}(repo)
 		}
@@ -73,15 +57,18 @@ var rootCmd = &cobra.Command{
 		close(errChan)
 
 		for err := range errChan {
-			log.Printf("ERROR: %v", err)
+			ui.Error("%v", err)
 		}
 	},
 }
 
 func Execute() {
-	err := rootCmd.Execute()
-	if err != nil {
-		log.Fatalf("ERROR: %v", err)
+	if err := rootCmd.Execute(); err != nil {
+		ui := tui.Get()
+		if ui != nil {
+			ui.Error("%v", err)
+			ui.Done()
+		}
 	}
 }
 
@@ -97,7 +84,6 @@ func init() {
 	rootCmd.Flags().String("with-dev", "", "Open the created PR in github.dev")
 	rootCmd.Flags().StringP("workpath", "w", "", "Specify the path of the working directory")
 	rootCmd.Flags().StringP("title", "t", "", "Specify the title of the PR")
-	rootCmd.Flags().StringP("log-output", "l", "stdout", "Specify the log output (stdout or file path)")
 	rootCmd.Flags().StringP("prompt", "P", "", "Execute Claude Code with the prompt provided as an argument")
 	rootCmd.Flags().Bool("auto-approve", false, "Auto-approve permission requests from Claude Code")
 }
