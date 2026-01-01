@@ -59,10 +59,14 @@ fix: "uses: actions/checkout@v4"
 gh api --paginate "/search/code?q=user:HikaruEgashira+actions/checkout" -q ".items.[].repository.name" | sort -u | xargs -I {} gh migrate --repo HikaruEgashira/{} --astgrep rules/upgrade-actions-checkout.yml
 ```
 
-### Example3: Claude Code Integration
+### Example3: AI Agent Integration
+
+Apply AI-powered changes across multiple repositories at once.
 
 ```bash
-gh migrate --repo owner/repo --prompt "Add node.js gitignore"
+# Add security policy to all your repositories
+gh api --paginate "/users/YOUR_NAME/repos" -q ".[].full_name" | \
+  xargs -I {} gh migrate --repo {} --prompt "Add SECURITY.md with vulnerability reporting guidelines"
 ```
 
 ## Acknowledgements
