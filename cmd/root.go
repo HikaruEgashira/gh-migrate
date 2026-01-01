@@ -13,25 +13,25 @@ import (
 var rootCmd = &cobra.Command{
 	Use:   "gh-migrate",
 	Short: "Creates a PR",
-	Long: `gh-migrateは、指定されたリポジトリに対してPRを作成するツールです。
-以下のようなシナリオで使用できます:
+	Long: `gh-migrate is a tool that creates PRs for specified repositories.
+It can be used in the following scenarios:
 
-1. コマンドを実行してPRを作成する:
+1. Execute a command and create a PR:
    gh migrate --repo HikaruEgashira/gh-migrate --cmd "sed -i '' 's/gh-migrate/gh-migrate2/g' README.md"
 
-2. シェルスクリプトを実行してPRを作成する:
+2. Execute a shell script and create a PR:
    gh migrate --repo HikaruEgashira/gh-migrate --sh scripts/update-version.sh
 
-3. ast-grepを使用してPRを作成する:
+3. Use ast-grep and create a PR:
    gh migrate --repo HikaruEgashira/gh-migrate --astgrep rules/upgrade-actions-checkout.yml
 
-4. semgrepを使用してPRを作成する:
+4. Use semgrep and create a PR:
    gh migrate --repo HikaruEgashira/gh-migrate --semgrep rules/security-check.yml
 
-5. Claude Codeを使用してPRを作成する:
-   gh migrate --repo HikaruEgashira/gh-migrate --prompt "README.mdを英語に翻訳して"
+5. Use Claude Code and create a PR:
+   gh migrate --repo HikaruEgashira/gh-migrate --prompt "Translate README.md to English"
 
-詳細な使用例やフラグの説明については、READMEをご覧ください。`,
+For detailed usage examples and flag descriptions, please refer to the README.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		repos := strings.Split(cmd.Flag("repo").Value.String(), ",")
 

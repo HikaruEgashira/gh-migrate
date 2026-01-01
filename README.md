@@ -9,22 +9,22 @@
 
 ```bash
 $ gh migrate -h
-PRを作成します
+Creates a PR
 
 Usage:
   gh-migrate [flags]
 
 Flags:
-  -r, --repo string      リポジトリ名
-  -f, --force            cacheを削除して再取得します
+  -r, --repo string      Repository name
+  -f, --force            Delete cache and re-fetch
 
-  -c, --cmd string       引数にあるコマンドを実行します
-  -s, --sh string        引数にあるシェルスクリプトファイルを実行します
-  -g, --semgrep string   引数にあるymlファイルをsemgrepとして実行します
-  -a, --astgrep string   引数にあるymlファイルをast-grepとして実行します
+  -c, --cmd string       Execute the command provided as an argument
+  -s, --sh string        Execute the shell script file provided as an argument
+  -g, --semgrep string   Execute the yml file provided as an argument as semgrep
+  -a, --astgrep string   Execute the yml file provided as an argument as ast-grep
 
-      --open string       作成したPRをブラウザで開きます
-      --with-dev string   作成したPRをgithub.devで開きます
+      --open string       Open the created PR in the browser
+      --with-dev string   Open the created PR in github.dev
 
   -h, --help             help for gh-migrate
 ```
@@ -44,7 +44,7 @@ gh migrate --repo HikaruEgashira/gh-migrate --cmd "sed -i '' 's/gh-migrate/gh-mi
 https://github.com/HikaruEgashira/gh-migrate/pull/10
 ```
 
-### Example2: GitHub Actionsのactions/checkoutをv4に変更する
+### Example2: Upgrade GitHub Actions actions/checkout to v4
 
 ```yml
 # ./example/upgrade-checkout.yml
@@ -61,4 +61,4 @@ gh api --paginate "/search/code?q=user:HikaruEgashira+actions/checkout" -q ".ite
 
 ## Acknowledgements
 
-- https://docs.github.com/ja/github-cli/github-cli/creating-github-cli-extensions
+- https://docs.github.com/en/github-cli/github-cli/creating-github-cli-extensions

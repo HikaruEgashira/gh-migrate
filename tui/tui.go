@@ -53,7 +53,7 @@ type Model struct {
 	maxBuffer    int
 	mu           sync.Mutex
 	done         bool
-	lineComplete bool // 前の行が改行で終わったかどうか
+	lineComplete bool // whether the previous line ended with a newline
 }
 
 type UpdateMsg struct {
@@ -138,7 +138,7 @@ func (m *Model) addToBuffer(content string) {
 			continue
 		}
 
-		// 前の行が完了していない場合、最後のバッファに追加
+		// If the previous line is not complete, append to the last buffer
 		if i == 0 && len(m.buffer) > 0 && !m.lineComplete {
 			m.buffer[len(m.buffer)-1] += " " + line
 		} else {
@@ -149,7 +149,7 @@ func (m *Model) addToBuffer(content string) {
 		}
 	}
 
-	// 改行で終わっているかどうかを追跡
+	// Track whether the content ends with a newline
 	m.lineComplete = strings.HasSuffix(content, "\n")
 }
 
