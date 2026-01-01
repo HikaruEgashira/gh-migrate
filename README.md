@@ -36,12 +36,12 @@ Flags:
 gh extension install HikaruEgashira/gh-migrate
 ```
 
-### Example1
+### Example1: Text Replacement with sed
 
 ```bash
-gh migrate --repo HikaruEgashira/gh-migrate --cmd "sed -i '' 's/gh-migrate/gh-migrate2/g' README.md"
+gh migrate --repo HikaruEgashira/gh-migrate-demo --cmd "sed -i '' 's/Demo/Updated Demo/g' README.md"
 
-https://github.com/HikaruEgashira/gh-migrate/pull/10
+https://github.com/HikaruEgashira/gh-migrate-demo/pull/19
 ```
 
 ### Example2: Upgrade GitHub Actions actions/checkout to v4
@@ -56,13 +56,17 @@ fix: "uses: actions/checkout@v4"
 ```
 
 ```bash
-gh api --paginate "/search/code?q=user:HikaruEgashira+actions/checkout" -q ".items.[].repository.name" | sort -u | xargs -I {} gh migrate --repo HikaruEgashira/{} --astgrep rules/upgrade-actions-checkout.yml
+gh migrate --repo HikaruEgashira/gh-migrate-demo --astgrep rules/upgrade-actions-checkout.yml
+
+https://github.com/HikaruEgashira/gh-migrate-demo/pull/21
 ```
 
 ### Example3: Add Security Policy
 
 ```bash
-gh migrate --repo owner/repo --prompt "Add SECURITY.md with vulnerability reporting guidelines"
+gh migrate --repo HikaruEgashira/gh-migrate-demo --prompt "Add SECURITY.md with vulnerability reporting guidelines"
+
+https://github.com/HikaruEgashira/gh-migrate-demo/pull/22
 ```
 
 ## Acknowledgements
