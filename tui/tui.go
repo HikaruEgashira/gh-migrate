@@ -46,13 +46,14 @@ type Step struct {
 }
 
 type Model struct {
-	title     string
-	status    string
-	steps     []Step
-	buffer    []string
-	maxBuffer int
-	mu        sync.Mutex
-	done      bool
+	title        string
+	status       string
+	steps        []Step
+	buffer       []string
+	maxBuffer    int
+	mu           sync.Mutex
+	done         bool
+	lineComplete bool // 前の行が改行で終わったかどうか
 }
 
 type UpdateMsg struct {
@@ -126,15 +127,30 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) addToBuffer(content string) {
+	if content == "" {
+		return
+	}
+
 	lines := strings.Split(content, "\n")
-	for _, line := range lines {
-		if line = strings.TrimSpace(line); line != "" {
+	for i, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+
+		// 前の行が完了していない場合、最後のバッファに追加
+		if i == 0 && len(m.buffer) > 0 && !m.lineComplete {
+			m.buffer[len(m.buffer)-1] += " " + line
+		} else {
 			m.buffer = append(m.buffer, line)
 			if len(m.buffer) > m.maxBuffer {
 				m.buffer = m.buffer[1:]
 			}
 		}
 	}
+
+	// 改行で終わっているかどうかを追跡
+	m.lineComplete = strings.HasSuffix(content, "\n")
 }
 
 func (m *Model) View() string {
