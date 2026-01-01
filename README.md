@@ -59,6 +59,21 @@ fix: "uses: actions/checkout@v4"
 gh api --paginate "/search/code?q=user:HikaruEgashira+actions/checkout" -q ".items.[].repository.name" | sort -u | xargs -I {} gh migrate --repo HikaruEgashira/{} --astgrep rules/upgrade-actions-checkout.yml
 ```
 
+### Example3: Claude Code Integration
+
+Use Claude Code to make AI-powered changes across repositories.
+
+```bash
+# Single repository
+gh migrate --repo owner/repo --prompt "Add node.js gitignore"
+
+# Multiple repositories
+gh migrate --repo owner/repo1,owner/repo2 --prompt "Fix typos in README"
+
+# Auto-approve mode
+gh migrate --repo owner/repo --prompt "Add comments to main.go" --auto-approve
+```
+
 ## Acknowledgements
 
 - https://docs.github.com/en/github-cli/github-cli/creating-github-cli-extensions
