@@ -48,10 +48,27 @@ func ExecuteMigration(repo string, cmd *cobra.Command) error {
 	}
 	os.Chdir(workPath)
 
-	// get default branch and its SHA
+	// Initialize: fetch latest and reset to default branch
 	stdout, _, _ := gh.Exec("repo", "view", "--json", "defaultBranchRef", "-q", ".defaultBranchRef.name")
 	defaultBranch := strings.TrimSpace(stdout.String())
-	
+
+	// Fetch latest from remote
+	fetchCmd := exec.Command("git", "fetch", "origin", defaultBranch)
+	if err := fetchCmd.Run(); err != nil {
+		return fmt.Errorf("failed to fetch latest: %v", err)
+	}
+
+	switchCmd := exec.Command("git", "switch", defaultBranch)
+	if err := switchCmd.Run(); err != nil {
+		return fmt.Errorf("failed to switch to default branch: %v", err)
+	}
+
+	resetCmd := exec.Command("git", "reset", "--hard", "origin/"+defaultBranch)
+	if err := resetCmd.Run(); err != nil {
+		return fmt.Errorf("failed to reset to latest: %v", err)
+	}
+	log.Printf("INFO: Reset to latest %s", defaultBranch)
+
 	// get default branch SHA
 	stdout, _, _ = gh.Exec("api", fmt.Sprintf("repos/%s/git/refs/heads/%s", repo, defaultBranch))
 	var refResponse struct {
