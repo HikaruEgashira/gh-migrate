@@ -79,7 +79,6 @@ func FetchDiff(parsed *ParsedURL) (*DiffResult, error) {
 }
 
 func fetchPRDiff(parsed *ParsedURL) (*DiffResult, error) {
-	// Get PR metadata
 	metaCmd := exec.Command("gh", "api",
 		fmt.Sprintf("repos/%s/%s/pulls/%d", parsed.Owner, parsed.Repo, parsed.Number),
 		"--jq", "{title: .title, body: .body}")
@@ -96,7 +95,6 @@ func fetchPRDiff(parsed *ParsedURL) (*DiffResult, error) {
 		return nil, fmt.Errorf("failed to parse PR metadata: %w", err)
 	}
 
-	// Get PR files
 	filesCmd := exec.Command("gh", "api",
 		fmt.Sprintf("repos/%s/%s/pulls/%d/files", parsed.Owner, parsed.Repo, parsed.Number))
 	filesOutput, err := filesCmd.Output()
@@ -134,7 +132,6 @@ func fetchCommitDiff(parsed *ParsedURL) (*DiffResult, error) {
 		return nil, fmt.Errorf("failed to parse commit: %w", err)
 	}
 
-	// Split commit message into title and body
 	parts := strings.SplitN(commit.Commit.Message, "\n", 2)
 	title := parts[0]
 	body := ""
@@ -161,7 +158,6 @@ func (d *DiffResult) FormatForPrompt() string {
 	for _, f := range d.Files {
 		sb.WriteString(fmt.Sprintf("\n--- %s (%s, +%d -%d) ---\n", f.Filename, f.Status, f.Additions, f.Deletions))
 		if f.Patch != "" {
-			// Truncate very long patches
 			patch := f.Patch
 			if len(patch) > 2000 {
 				patch = patch[:2000] + "\n... (truncated)"

@@ -82,7 +82,6 @@ func ExecuteMigration(repo string, cmd *cobra.Command, ui *tui.UI) error {
 	promptFileOption := cmd.Flag("prompt-file").Value.String()
 	autoApprove, _ := cmd.Flags().GetBool("auto-approve")
 
-	// Read prompt from file if specified
 	if promptFileOption != "" && promptOption == "" {
 		content, err := os.ReadFile(promptFileOption)
 		if err != nil {
@@ -211,24 +210,19 @@ func runGitCommand(workPath string, args ...string) error {
 	return nil
 }
 
-// extractPromptFromFile extracts the prompt content from a Claude Code slash command file
-// It skips the YAML frontmatter (---\n...\n---) and returns the remaining content
 func extractPromptFromFile(content string) string {
 	content = strings.TrimSpace(content)
 
-	// Check for frontmatter
 	if !strings.HasPrefix(content, "---") {
 		return content
 	}
 
-	// Find the end of frontmatter
 	rest := content[3:]
 	endIndex := strings.Index(rest, "\n---")
 	if endIndex == -1 {
 		return content
 	}
 
-	// Return content after frontmatter
 	prompt := strings.TrimSpace(rest[endIndex+4:])
 	return prompt
 }
