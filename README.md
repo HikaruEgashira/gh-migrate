@@ -9,24 +9,25 @@
 
 ```bash
 $ gh migrate -h
-Creates a PR
-
 Usage:
   gh-migrate [flags]
+  gh-migrate [command]
+
+Available Commands:
+  learn       Learn from a PR or commit and generate a reusable prompt
 
 Flags:
-  -r, --repo string      Repository name
-  -f, --force            Delete cache and re-fetch
-
-  -c, --cmd string       Execute the command provided as an argument
-  -s, --sh string        Execute the shell script file provided as an argument
-  -g, --semgrep string   Execute the yml file provided as an argument as semgrep
-  -a, --astgrep string   Execute the yml file provided as an argument as ast-grep
-
+      --auto-approve      Auto-approve permission requests from Claude Code
+  -c, --cmd string        Execute command or script file (auto-detects if argument is a file path)
+  -f, --force             Delete cache and re-fetch
+  -h, --help              help for gh-migrate
       --open string       Open the created PR in the browser
+  -P, --prompt string     Execute Claude Code with the prompt provided as an argument
+  -r, --repo string       Specify repository name (multiple repositories can be specified with comma separation)
+      --template string   Path to a local PR template file (overrides repository template)
+  -t, --title string      Specify the title of the PR
       --with-dev string   Open the created PR in github.dev
-
-  -h, --help             help for gh-migrate
+  -w, --workpath string   Specify the path of the working directory
 ```
 
 ## Usage
@@ -44,29 +45,28 @@ gh migrate --repo HikaruEgashira/gh-migrate-demo --cmd "sed -i '' 's/Demo/Update
 https://github.com/HikaruEgashira/gh-migrate-demo/pull/19
 ```
 
-### Example2: Upgrade GitHub Actions actions/checkout to v4
-
-```yml
-# ./example/upgrade-checkout.yml
-id: upgrade-checkout
-language: yml
-rule: {pattern: "uses: $NAME"}
-constraints: {NAME: {regex: ^actions/checkout}}
-fix: "uses: actions/checkout@v4"
-```
-
-```bash
-gh migrate --repo HikaruEgashira/gh-migrate-demo --astgrep rules/upgrade-actions-checkout.yml
-
-https://github.com/HikaruEgashira/gh-migrate-demo/pull/21
-```
-
-### Example3: Add Security Policy
+### Example2: Add Security Policy with Claude Code
 
 ```bash
 gh migrate --repo HikaruEgashira/gh-migrate-demo --prompt "Add SECURITY.md with vulnerability reporting guidelines"
 
 https://github.com/HikaruEgashira/gh-migrate-demo/pull/22
+```
+
+### Example3: Learn from PR and Generate Reusable Prompt
+
+```bash
+# Learn from a PR and generate a Claude Code slash command
+gh migrate learn https://github.com/owner/repo/pull/123 --name "add-gitignore"
+
+# Learn from a commit
+gh migrate learn https://github.com/owner/repo/commit/abc1234
+```
+
+### Example4: Use Custom PR Template
+
+```bash
+gh migrate --repo HikaruEgashira/gh-migrate-demo --prompt "Update dependencies" --template ./templates/pr-template.md
 ```
 
 ## Acknowledgements
