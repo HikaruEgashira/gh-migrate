@@ -26,6 +26,8 @@ Flags:
   -t, --title string      Specify the title of the PR
 ```
 
+![demo](docs/examples/demo.gif)
+
 ## Usage
 
 ```bash
