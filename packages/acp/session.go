@@ -15,7 +15,7 @@ type ClaudeResult struct {
 	AgentResponse string
 }
 
-func RunClaudeSession(ctx context.Context, workDir string, prompt string, autoApprove bool, ui *tui.UI) (*ClaudeResult, error) {
+func RunClaudeSession(ctx context.Context, workDir string, prompt string, autoApprove bool, ui *tui.UI, prTemplate string) (*ClaudeResult, error) {
 	cmd := exec.CommandContext(ctx, "npx", "-y", "@zed-industries/claude-code-acp@latest")
 	cmd.Dir = workDir
 	cmd.Stderr = io.Discard
@@ -70,7 +70,19 @@ func RunClaudeSession(ctx context.Context, workDir string, prompt string, autoAp
 	ui.Log("session: %s", newSess.SessionId[:8])
 
 	// Wrap user prompt with PR body generation instruction
-	wrappedPrompt := prompt + `
+	var wrappedPrompt string
+	if prTemplate != "" {
+		wrappedPrompt = prompt + fmt.Sprintf(`
+
+After completing the task, fill in the following PR template. Replace placeholders (like <!-- description -->) and empty sections with actual content based on the changes you made.
+
+---
+%s
+---
+
+Output ONLY the filled template, starting from the first line of the template.`, prTemplate)
+	} else {
+		wrappedPrompt = prompt + `
 
 After completing the task, output ONLY a PR description. Your entire response must start with "## Summary" - no other text before it.
 
@@ -79,6 +91,7 @@ Example output format:
 Add .prettierrc configuration file for consistent code formatting across the project.
 
 Your turn - write the summary for this task:`
+	}
 
 	_, err = conn.Prompt(ctx, acp.PromptRequest{
 		SessionId: newSess.SessionId,

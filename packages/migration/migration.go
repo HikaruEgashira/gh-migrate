@@ -83,9 +83,22 @@ func ExecuteMigration(repo string, cmd *cobra.Command, ui *tui.UI) error {
 	if promptOption != "" {
 		titleTemplate = titleTemplate + " claude: " + promptOption
 
+		// Get PR template
+		templateOption := cmd.Flag("template").Value.String()
+		var prTemplate string
+		templateResult, err := GetPRTemplate(templateOption, workPath)
+		if err != nil {
+			ui.Log("warning: failed to load PR template: %v", err)
+		}
+		if templateResult != nil {
+			ui.Step("load PR template (" + templateResult.Path + ")")
+			prTemplate = templateResult.Content
+			ui.StepDone()
+		}
+
 		ui.Step("claude code")
 		ctx := context.Background()
-		result, err := acp.RunClaudeSession(ctx, workPath, promptOption, autoApprove, ui)
+		result, err := acp.RunClaudeSession(ctx, workPath, promptOption, autoApprove, ui, prTemplate)
 		if err != nil {
 			ui.StepError()
 			return fmt.Errorf("Claude Code execution failed: %w", err)
