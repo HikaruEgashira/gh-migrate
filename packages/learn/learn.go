@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
-	"strings"
 
 	"github.com/HikaruEgashira/gh-migrate/packages/acp"
 	"github.com/HikaruEgashira/gh-migrate/packages/tui"
@@ -18,26 +16,40 @@ type Options struct {
 	OutputDir string
 }
 
-const learnPromptTemplate = `You are a prompt engineer. Analyze this PR/commit diff and create a reusable Claude Code slash command.
+func buildPrompt(diff *DiffResult, outputDir string, customName string) string {
+	filenameInstruction := ""
+	if customName != "" {
+		filenameInstruction = fmt.Sprintf("Use exactly this filename: %s.md", customName)
+	} else {
+		filenameInstruction = "Choose a descriptive kebab-case filename based on what the command does (e.g., add-security-policy.md, setup-ci-workflow.md)"
+	}
 
-OUTPUT FORMAT (must follow exactly):
+	return fmt.Sprintf(`Analyze this PR/commit diff and create a reusable Claude Code slash command file.
+
+TASK:
+1. Analyze the diff to understand what changes were made
+2. Create a reusable prompt that can apply similar changes to other repositories
+3. Save the file to: %s/<filename>.md
+
+FILE FORMAT (Claude Code slash command):
 ---
-description: One line description
+description: One line description of what this command does
 ---
-Your prompt content here
+<Your reusable prompt here>
 
-RULES:
-1. Start with "---" on the first line
-2. Include "description: " line
-3. End frontmatter with "---" on its own line
-4. Write the reusable prompt after the frontmatter
-5. Focus on the pattern, not specific files
-6. Make it work for any repository
+FILENAME: %s
 
-DIFF:
+RULES FOR THE PROMPT:
+- Focus on the pattern/intent, not specific file paths
+- Make it generalizable to any repository
+- Be clear about what should be created or modified
+- Include any conventions or best practices observed
+
+DIFF TO ANALYZE:
 %s
 
-OUTPUT:`
+Create the file now.`, outputDir, filenameInstruction, diff.FormatForPrompt())
+}
 
 func Execute(opts *Options, ui *tui.UI) error {
 	ctx := context.Background()
@@ -59,66 +71,27 @@ func Execute(opts *Options, ui *tui.UI) error {
 	ui.StepDone()
 	ui.Log("found %d file(s)", len(diff.Files))
 
-	ui.Step("generate prompt (claude code)")
-	prompt := fmt.Sprintf(learnPromptTemplate, diff.FormatForPrompt())
-
-	tempDir, err := os.MkdirTemp("", "gh-migrate-learn-*")
+	// Get absolute path for output directory
+	outputDir, err := filepath.Abs(opts.OutputDir)
 	if err != nil {
-		ui.StepError()
-		return fmt.Errorf("failed to create temp dir: %w", err)
+		return fmt.Errorf("failed to resolve output dir: %w", err)
 	}
-	defer os.RemoveAll(tempDir)
 
-	result, err := acp.RunClaudeSession(ctx, tempDir, prompt, true, ui, "")
+	// Ensure output directory exists
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
+		return fmt.Errorf("failed to create output dir: %w", err)
+	}
+
+	ui.Step("generate and save command (claude code)")
+	prompt := buildPrompt(diff, outputDir, opts.Name)
+
+	_, err = acp.RunClaudeSession(ctx, outputDir, prompt, true, ui, "")
 	if err != nil {
 		ui.StepError()
 		return fmt.Errorf("Claude Code execution failed: %w", err)
 	}
 	ui.StepDone()
 
-	ui.Step("save command")
-	generated := result.AgentResponse
-
-	filename := opts.Name
-	if filename == "" {
-		filename = generateFilename(diff.Title)
-	}
-	if !strings.HasSuffix(filename, ".md") {
-		filename += ".md"
-	}
-
-	outputPath := filepath.Join(opts.OutputDir, filename)
-	if err := os.MkdirAll(filepath.Dir(outputPath), 0o755); err != nil {
-		ui.StepError()
-		return fmt.Errorf("failed to create output dir: %w", err)
-	}
-
-	if err := os.WriteFile(outputPath, []byte(generated), 0o644); err != nil {
-		ui.StepError()
-		return fmt.Errorf("failed to save command: %w", err)
-	}
-	ui.StepDone()
-
-	ui.Success("saved: %s", outputPath)
+	ui.Success("command saved to: %s", outputDir)
 	return nil
-}
-
-func generateFilename(title string) string {
-	title = strings.ToLower(title)
-	re := regexp.MustCompile(`[^a-z0-9\s-]`)
-	title = re.ReplaceAllString(title, "")
-	title = strings.ReplaceAll(title, " ", "-")
-	re = regexp.MustCompile(`-+`)
-	title = re.ReplaceAllString(title, "-")
-	title = strings.Trim(title, "-")
-
-	if title == "" {
-		title = "learned-prompt"
-	}
-
-	if len(title) > 50 {
-		title = title[:50]
-	}
-
-	return title
 }
