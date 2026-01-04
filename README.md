@@ -9,25 +9,33 @@
 
 ```bash
 $ gh migrate -h
+gh-migrate is a tool that creates PRs for specified repositories.
+
+Available Commands:
+  prompt    Execute Claude Code with a prompt and create a PR
+  exec      Execute a command or script and create a PR
+  learn     Learn from a PR or commit and generate a reusable prompt
+
+Examples:
+  gh migrate prompt "Add gitignore" --repo owner/repo
+  gh migrate exec "sed -i 's/old/new/g' file.txt" --repo owner/repo
+  gh migrate learn https://github.com/owner/repo/pull/123
+
+For detailed usage examples and flag descriptions, please refer to the README.
+
 Usage:
   gh-migrate [flags]
   gh-migrate [command]
 
 Available Commands:
+  completion  Generate the autocompletion script for the specified shell
+  exec        Execute a command or script and create a PR
+  help        Help about any command
   learn       Learn from a PR or commit and generate a reusable prompt
+  prompt      Execute Claude Code with a prompt and create a PR
 
 Flags:
-      --auto-approve      Auto-approve permission requests from Claude Code
-  -c, --cmd string        Execute command or script file (auto-detects if argument is a file path)
-  -f, --force             Delete cache and re-fetch
-  -h, --help              help for gh-migrate
-      --open string       Open the created PR in the browser
-  -P, --prompt string     Execute Claude Code with the prompt provided as an argument
-  -r, --repo string       Specify repository name (multiple repositories can be specified with comma separation)
-      --template string   Path to a local PR template file (overrides repository template)
-  -t, --title string      Specify the title of the PR
-      --with-dev string   Open the created PR in github.dev
-  -w, --workpath string   Specify the path of the working directory
+  -h, --help   help for gh-migrate
 ```
 
 ## Usage
@@ -40,7 +48,7 @@ gh extension install HikaruEgashira/gh-migrate
 ### Example1: Text Replacement with sed
 
 ```bash
-gh migrate --repo HikaruEgashira/gh-migrate-demo --cmd "sed -i '' 's/Demo/Updated Demo/g' README.md"
+gh migrate exec "sed -i '' 's/Demo/Updated Demo/g' README.md" --repo HikaruEgashira/gh-migrate-demo
 
 https://github.com/HikaruEgashira/gh-migrate-demo/pull/19
 ```
@@ -48,7 +56,7 @@ https://github.com/HikaruEgashira/gh-migrate-demo/pull/19
 ### Example2: Add Security Policy with Claude Code
 
 ```bash
-gh migrate --repo HikaruEgashira/gh-migrate-demo --prompt "Add SECURITY.md with vulnerability reporting guidelines"
+gh migrate prompt "Add SECURITY.md with vulnerability reporting guidelines" --repo HikaruEgashira/gh-migrate-demo
 
 https://github.com/HikaruEgashira/gh-migrate-demo/pull/22
 ```
@@ -66,8 +74,32 @@ gh migrate learn https://github.com/owner/repo/commit/abc1234
 ### Example4: Use Custom PR Template
 
 ```bash
-gh migrate --repo HikaruEgashira/gh-migrate-demo --prompt "Update dependencies" --template ./templates/pr-template.md
+gh migrate prompt "Update dependencies" --repo HikaruEgashira/gh-migrate-demo --template ./templates/pr-template.md
 ```
+
+## Migration from v4.x to v5.0
+
+v5.0 introduces a breaking change to the CLI structure. The `--prompt` and `--cmd` flags have been converted to subcommands.
+
+### Before (v4.x)
+```bash
+gh migrate --repo owner/repo --prompt "Add gitignore"
+gh migrate --repo owner/repo --cmd "sed -i 's/old/new/g' file.txt"
+gh migrate --repo owner/repo --cmd "sed ..." --title "Custom Title"
+```
+
+### After (v5.0)
+```bash
+gh migrate prompt "Add gitignore" --repo owner/repo
+gh migrate exec "sed -i 's/old/new/g' file.txt" --repo owner/repo
+gh migrate exec "sed ..." --repo owner/repo --title "Custom Title"
+```
+
+### Key Changes
+- `--prompt` → `prompt` subcommand with positional argument
+- `--cmd` → `exec` subcommand with positional argument
+- `--title` flag is now only available in `exec` subcommand
+- All other flags remain the same but are now local to each subcommand
 
 ## Acknowledgements
 

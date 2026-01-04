@@ -1,58 +1,28 @@
 package cli
 
 import (
-	"fmt"
-	"strings"
-	"sync"
-
-	"github.com/HikaruEgashira/gh-migrate/packages/migration"
 	"github.com/HikaruEgashira/gh-migrate/packages/tui"
 	"github.com/spf13/cobra"
 )
 
 var rootCmd = &cobra.Command{
 	Use:   "gh-migrate",
-	Short: "Creates a PR",
+	Short: "Creates PRs for specified repositories",
 	Long: `gh-migrate is a tool that creates PRs for specified repositories.
-It can be used in the following scenarios:
 
-1. Execute a command and create a PR:
-   gh migrate --repo HikaruEgashira/gh-migrate --cmd "sed -i '' 's/gh-migrate/gh-migrate2/g' README.md"
+Available Commands:
+  prompt    Execute Claude Code with a prompt and create a PR
+  exec      Execute a command or script and create a PR
+  learn     Learn from a PR or commit and generate a reusable prompt
 
-2. Execute a shell script and create a PR:
-   gh migrate --repo HikaruEgashira/gh-migrate --cmd scripts/update-version.sh
-
-3. Use Claude Code and create a PR:
-   gh migrate --repo HikaruEgashira/gh-migrate --prompt "Translate README.md to English"
+Examples:
+  gh migrate prompt "Add gitignore" --repo owner/repo
+  gh migrate exec "sed -i 's/old/new/g' file.txt" --repo owner/repo
+  gh migrate learn https://github.com/owner/repo/pull/123
 
 For detailed usage examples and flag descriptions, please refer to the README.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		repos := strings.Split(cmd.Flag("repo").Value.String(), ",")
-
-		ui := tui.Init("gh-migrate")
-		defer ui.Done()
-
-		ui.Status(fmt.Sprintf("processing %d repo(s)", len(repos)))
-
-		var wg sync.WaitGroup
-		errChan := make(chan error, len(repos))
-
-		for _, repo := range repos {
-			wg.Add(1)
-			go func(repo string) {
-				defer wg.Done()
-				if err := migration.ExecuteMigration(repo, cmd, ui); err != nil {
-					errChan <- fmt.Errorf("%s: %w", repo, err)
-				}
-			}(repo)
-		}
-
-		wg.Wait()
-		close(errChan)
-
-		for err := range errChan {
-			ui.Error("%v", err)
-		}
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return cmd.Help()
 	},
 }
 
@@ -67,16 +37,4 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.Flags().StringP("repo", "r", "", "Specify repository name (multiple repositories can be specified with comma separation)")
-	rootCmd.MarkFlagRequired("repo")
-	rootCmd.Flags().BoolP("force", "f", false, "Delete cache and re-fetch")
-	rootCmd.Flags().StringP("cmd", "c", "", "Execute command or script file (auto-detects if argument is a file path)")
-	rootCmd.Flags().String("open", "", "Open the created PR in the browser")
-	rootCmd.Flags().String("with-dev", "", "Open the created PR in github.dev")
-	rootCmd.Flags().StringP("workpath", "w", "", "Specify the path of the working directory")
-	rootCmd.Flags().StringP("title", "t", "", "Specify the title of the PR")
-	rootCmd.Flags().StringP("prompt", "P", "", "Execute Claude Code with the prompt provided as an argument")
-	rootCmd.Flags().String("prompt-file", "", "Read prompt from file (supports .claude/commands/*.md)")
-	rootCmd.Flags().Bool("auto-approve", false, "Auto-approve permission requests from Claude Code")
-	rootCmd.Flags().String("template", "", "Path to a local PR template file (overrides repository template)")
 }
