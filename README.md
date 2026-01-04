@@ -17,7 +17,7 @@ Available Commands:
   learn       Learn from a PR or commit and generate a reusable prompt
 ```
 
-![demo](docs/examples/demo.gif)
+![demo](packages/assets/demo.gif)
 
 ## Usage
 
