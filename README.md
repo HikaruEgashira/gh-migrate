@@ -38,6 +38,8 @@ Flags:
   -h, --help   help for gh-migrate
 ```
 
+![demo](docs/examples/demo.gif)
+
 ## Usage
 
 ```bash
@@ -65,10 +67,10 @@ https://github.com/HikaruEgashira/gh-migrate-demo/pull/22
 
 ```bash
 # Learn from a PR and generate a Claude Code slash command
-gh migrate learn https://github.com/owner/repo/pull/123 --name "add-gitignore"
+gh migrate learn https://github.com/owner/repo/pull/123 --name "add-license-file"
 
-# Learn from a commit
-gh migrate learn https://github.com/owner/repo/commit/abc1234
+# Use slash command
+gh migrate prompt --repo HikaruEgashira/gh-migrate-demo --prompt-file ./.claude/commands/add-license-file.md
 ```
 
 ### Example4: Use Custom PR Template
@@ -76,30 +78,6 @@ gh migrate learn https://github.com/owner/repo/commit/abc1234
 ```bash
 gh migrate prompt "Update dependencies" --repo HikaruEgashira/gh-migrate-demo --template ./templates/pr-template.md
 ```
-
-## Migration from v4.x to v5.0
-
-v5.0 introduces a breaking change to the CLI structure. The `--prompt` and `--cmd` flags have been converted to subcommands.
-
-### Before (v4.x)
-```bash
-gh migrate --repo owner/repo --prompt "Add gitignore"
-gh migrate --repo owner/repo --cmd "sed -i 's/old/new/g' file.txt"
-gh migrate --repo owner/repo --cmd "sed ..." --title "Custom Title"
-```
-
-### After (v5.0)
-```bash
-gh migrate prompt "Add gitignore" --repo owner/repo
-gh migrate exec "sed -i 's/old/new/g' file.txt" --repo owner/repo
-gh migrate exec "sed ..." --repo owner/repo --title "Custom Title"
-```
-
-### Key Changes
-- `--prompt` → `prompt` subcommand with positional argument
-- `--cmd` → `exec` subcommand with positional argument
-- `--title` flag is now only available in `exec` subcommand
-- All other flags remain the same but are now local to each subcommand
 
 ## Acknowledgements
 
