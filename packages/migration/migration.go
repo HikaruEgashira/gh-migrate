@@ -51,28 +51,10 @@ func ExecuteMigration(repo string, cmd *cobra.Command, ui *tui.UI) error {
 	stdout, _, _ := gh.Exec("repo", "view", "--json", "defaultBranchRef", "-q", ".defaultBranchRef.name")
 	defaultBranch := strings.TrimSpace(stdout.String())
 
-	// exec command
+	// exec command or script
 	cmdOption := cmd.Flag("cmd").Value.String()
 	if cmdOption != "" {
-		if err := scripts.ExecCommand(cmdOption, &titleTemplate, &bodyTemplate); err != nil {
-			return err
-		}
-	}
-	shOption := cmd.Flag("sh").Value.String()
-	if shOption != "" {
-		if err := scripts.ExecScript(shOption, &titleTemplate, &bodyTemplate, currentPath, "sh"); err != nil {
-			return err
-		}
-	}
-	astgrepOption := cmd.Flag("astgrep").Value.String()
-	if astgrepOption != "" {
-		if err := scripts.ExecScript(astgrepOption, &titleTemplate, &bodyTemplate, currentPath, "astgrep"); err != nil {
-			return err
-		}
-	}
-	semgrepOption := cmd.Flag("semgrep").Value.String()
-	if semgrepOption != "" {
-		if err := scripts.ExecScript(semgrepOption, &titleTemplate, &bodyTemplate, currentPath, "semgrep"); err != nil {
+		if err := scripts.Exec(cmdOption, &titleTemplate, &bodyTemplate, currentPath); err != nil {
 			return err
 		}
 	}
