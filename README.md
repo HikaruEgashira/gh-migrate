@@ -9,21 +9,33 @@
 
 ```bash
 $ gh migrate -h
+gh-migrate is a tool that creates PRs for specified repositories.
+
+Available Commands:
+  prompt    Execute Claude Code with a prompt and create a PR
+  exec      Execute a command or script and create a PR
+  learn     Learn from a PR or commit and generate a reusable prompt
+
+Examples:
+  gh migrate prompt "Add gitignore" --repo owner/repo
+  gh migrate exec "sed -i 's/old/new/g' file.txt" --repo owner/repo
+  gh migrate learn https://github.com/owner/repo/pull/123
+
+For detailed usage examples and flag descriptions, please refer to the README.
+
 Usage:
   gh-migrate [flags]
   gh-migrate [command]
 
 Available Commands:
+  completion  Generate the autocompletion script for the specified shell
+  exec        Execute a command or script and create a PR
+  help        Help about any command
   learn       Learn from a PR or commit and generate a reusable prompt
+  prompt      Execute Claude Code with a prompt and create a PR
 
 Flags:
-      --auto-approve      Auto-approve permission requests from Claude Code
-  -c, --cmd string        Execute command or script file (auto-detects if argument is a file path)
-  -f, --force             Delete cache and re-fetch
-  -P, --prompt string     Execute Claude Code with the prompt provided as an argument
-  -r, --repo string       Specify repository name (comma separation for multiple)
-      --template string   Path to a local PR template file
-  -t, --title string      Specify the title of the PR
+  -h, --help   help for gh-migrate
 ```
 
 ![demo](docs/examples/demo.gif)
@@ -38,7 +50,7 @@ gh extension install HikaruEgashira/gh-migrate
 ### Example1: Text Replacement with sed
 
 ```bash
-gh migrate --repo HikaruEgashira/gh-migrate-demo --cmd "sed -i '' 's/Demo/Updated Demo/g' README.md"
+gh migrate exec "sed -i '' 's/Demo/Updated Demo/g' README.md" --repo HikaruEgashira/gh-migrate-demo
 
 https://github.com/HikaruEgashira/gh-migrate-demo/pull/19
 ```
@@ -46,7 +58,7 @@ https://github.com/HikaruEgashira/gh-migrate-demo/pull/19
 ### Example2: Add Security Policy with Claude Code
 
 ```bash
-gh migrate --repo HikaruEgashira/gh-migrate-demo --prompt "Add SECURITY.md with vulnerability reporting guidelines"
+gh migrate prompt "Add SECURITY.md with vulnerability reporting guidelines" --repo HikaruEgashira/gh-migrate-demo
 
 https://github.com/HikaruEgashira/gh-migrate-demo/pull/22
 ```
@@ -58,5 +70,15 @@ https://github.com/HikaruEgashira/gh-migrate-demo/pull/22
 gh migrate learn https://github.com/owner/repo/pull/123 --name "add-license-file"
 
 # Use slash command
-gh migrate --repo HikaruEgashira/gh-migrate-demo --prompt-file ./.claude/commands/add-license-file.md
+gh migrate prompt --repo HikaruEgashira/gh-migrate-demo --prompt-file ./.claude/commands/add-license-file.md
 ```
+
+### Example4: Use Custom PR Template
+
+```bash
+gh migrate prompt "Update dependencies" --repo HikaruEgashira/gh-migrate-demo --template ./templates/pr-template.md
+```
+
+## Acknowledgements
+
+- https://docs.github.com/en/github-cli/github-cli/creating-github-cli-extensions
