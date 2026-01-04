@@ -85,6 +85,7 @@ func init() {
 	rootCmd.Flags().StringP("workpath", "w", "", "Specify the path of the working directory")
 	rootCmd.Flags().StringP("title", "t", "", "Specify the title of the PR")
 	rootCmd.Flags().StringP("prompt", "P", "", "Execute Claude Code with the prompt provided as an argument")
+	rootCmd.Flags().String("prompt-file", "", "Read prompt from file (supports .claude/commands/*.md)")
 	rootCmd.Flags().Bool("auto-approve", false, "Auto-approve permission requests from Claude Code")
 	rootCmd.Flags().String("template", "", "Path to a local PR template file (overrides repository template)")
 }
