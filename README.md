@@ -20,14 +20,10 @@ Flags:
       --auto-approve      Auto-approve permission requests from Claude Code
   -c, --cmd string        Execute command or script file (auto-detects if argument is a file path)
   -f, --force             Delete cache and re-fetch
-  -h, --help              help for gh-migrate
-      --open string       Open the created PR in the browser
   -P, --prompt string     Execute Claude Code with the prompt provided as an argument
-  -r, --repo string       Specify repository name (multiple repositories can be specified with comma separation)
-      --template string   Path to a local PR template file (overrides repository template)
+  -r, --repo string       Specify repository name (comma separation for multiple)
+      --template string   Path to a local PR template file
   -t, --title string      Specify the title of the PR
-      --with-dev string   Open the created PR in github.dev
-  -w, --workpath string   Specify the path of the working directory
 ```
 
 ## Usage
@@ -57,18 +53,8 @@ https://github.com/HikaruEgashira/gh-migrate-demo/pull/22
 
 ```bash
 # Learn from a PR and generate a Claude Code slash command
-gh migrate learn https://github.com/owner/repo/pull/123 --name "add-gitignore"
+gh migrate learn https://github.com/owner/repo/pull/123 --name "add-license-file"
 
-# Learn from a commit
-gh migrate learn https://github.com/owner/repo/commit/abc1234
+# Use slash command
+gh migrate --repo HikaruEgashira/gh-migrate-demo --prompt-file ./.claude/commands/add-license-file.md
 ```
-
-### Example4: Use Custom PR Template
-
-```bash
-gh migrate --repo HikaruEgashira/gh-migrate-demo --prompt "Update dependencies" --template ./templates/pr-template.md
-```
-
-## Acknowledgements
-
-- https://docs.github.com/en/github-cli/github-cli/creating-github-cli-extensions
