@@ -7,7 +7,7 @@ on:
 
 jobs:
   test:
-    runs-on: [self-hosted, linux, arm64, hikae-economy]
+    runs-on: [self-hosted, linux, arm64, hikae-flash]
     permissions:
       contents: write
       pull-requests: write
