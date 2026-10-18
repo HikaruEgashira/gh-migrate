@@ -7,7 +7,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, linux, arm64, hikae-economy]
     permissions:
       contents: write
       pull-requests: write
