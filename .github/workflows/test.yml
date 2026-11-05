@@ -1,9 +1,35 @@
 name: Test
 on:
-  workflow_call: 
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_call:
+
+# Validation never needs to write: no write scopes and no GH_TOKEN.
+permissions:
+  contents: read
 
 jobs:
   test:
-    runs-on: hikae-2vcpu-ubuntu-2404-arm
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Vet
+        run: go vet ./...
+      - name: Test
+        run: go test ./...
+      - name: Build
+        run: go build -o gh-migrate ./app
+      # Dry run: exercise the CLI without cloning repositories or creating PRs.
+      - name: Smoke test CLI
+        run: |
+          ./gh-migrate --help
+          ./gh-migrate exec --help
+          ./gh-migrate prompt --help
+          ./gh-migrate learn --help
