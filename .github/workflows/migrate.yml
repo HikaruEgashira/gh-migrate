@@ -1,0 +1,48 @@
+name: Migrate
+# Creates branches and PRs in the target repository, so it only runs when a
+# maintainer starts it explicitly. Pull request validation lives in test.yml.
+on:
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: "Target repository (owner/name)"
+        required: true
+        default: HikaruEgashira/gh-migrate-demo
+      command:
+        description: "Command or script passed to `gh migrate exec`"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    runs-on: hikae-2vcpu-ubuntu-2404
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TARGET_REPO: ${{ inputs.repo }}
+      MIGRATE_COMMAND: ${{ inputs.command }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Setup Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Setup gh-migrate
+        run: |
+          go build -o gh-migrate ./app
+          gh extension install .
+          gh migrate --help
+      - name: Run gh-migrate
+        run: |
+          mkdir work
+          gh migrate exec "$MIGRATE_COMMAND" --repo "$TARGET_REPO" --workpath work --force
