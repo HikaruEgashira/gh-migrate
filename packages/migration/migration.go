@@ -202,7 +202,7 @@ func ExecuteMigration(opts MigrationOptions, ui *tui.UI) error {
 		return err
 	}
 	ui.StepDone()
-	ui.Success(strings.TrimSpace(stdout.String()))
+	ui.Success("%s", strings.TrimSpace(stdout.String()))
 
 	// open PR
 	if opts.Open {

@@ -1,45 +1,68 @@
-name: CI
+name: CI and deploy
 on:
-  # push:
-  #   branches:
-  #     - main
-  workflow_call:
-
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
-  test:
+  check:
     runs-on: hikae-2vcpu-ubuntu-2404
-    permissions:
-      contents: write
-      pull-requests: write
-    env:
-      GH_TOKEN: ${{ github.token }}
+    timeout-minutes: 15
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Setup Git
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 22
+      - name: Verify the configured client routing identity
+        env:
+          CLIENT_BOT_LOGIN: ${{ vars.CLIENT_BOT_LOGIN }}
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-      - name: Download ast-grep
+          node --input-type=module -e "import {strict as assert} from 'node:assert'; import {config} from './src/core.mjs'; assert.equal(process.env.CLIENT_BOT_LOGIN, config.client_app + '[bot]');"
+      - run: npm test
+      - name: Verify Agentic Workflow lockfiles
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          curl "https://github.com/ast-grep/ast-grep/releases/download/0.27.0/app-$(uname -m)-unknown-linux-gnu.zip" -L -o ast-grep.zip
-          unzip ast-grep.zip
-          ls -al
-          chmod +x ast-grep
-          chmod +x sg
-          ls -al
-          ./ast-grep --version
-          ./sg --version
-          echo $PWD >> $GITHUB_PATH
-      - name: Setup gh-migrate
+          gh extension install github/gh-aw --pin v1.0.1
+          bash scripts/compile-agentic.sh --check
+  deploy:
+    environment: selfheal-server
+    needs: check
+    if: github.event.repository.private && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: hikae-2vcpu-ubuntu-2404
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c
+        with:
+          role-to-assume: ${{ vars.SERVER_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - name: Deploy webhook and queue consumer
+        env:
+          FUNCTION_PREFIX: ${{ vars.FUNCTION_PREFIX }}
         run: |
-          go mod tidy
-          go build
-          gh extension install .
-          gh migrate --help
-      - name: Run gh-migrate
+          set -euo pipefail
+          zip /tmp/selfheal.zip src/*.mjs src/config.json
+          for function in webhook dispatch; do
+            aws lambda update-function-code --function-name "${FUNCTION_PREFIX}-$function" \
+              --zip-file fileb:///tmp/selfheal.zip --publish --query Version --output text
+            aws lambda wait function-updated --function-name "${FUNCTION_PREFIX}-$function"
+          done
+      - name: Verify service health
+        env:
+          WEBHOOK_URL: ${{ vars.WEBHOOK_URL }}
         run: |
-          mkdir work
-          gh migrate --repo HikaruEgashira/gh-migrate --workpath work --astgrep rules/upgrade-actions-checkout.yml --force
-
-# act push
+          test -n "$WEBHOOK_URL"
+          curl --fail --silent --show-error "$WEBHOOK_URL/health"
