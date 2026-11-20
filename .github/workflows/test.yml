@@ -1,9 +1,29 @@
 name: Test
 on:
-  workflow_call: 
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_call:
+
+permissions:
+  contents: read
 
 jobs:
   test:
     runs-on: hikae-2vcpu-ubuntu-2404
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Vet
+        run: go vet ./...
+      - name: Test
+        run: go test ./...
+      - name: Build
+        run: go build -o gh-migrate ./app
+      - name: Smoke test
+        run: ./gh-migrate --help

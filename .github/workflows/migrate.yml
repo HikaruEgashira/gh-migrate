@@ -1,0 +1,53 @@
+name: Migrate
+on:
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: "Target repository (owner/repo, comma separated)"
+        required: true
+        type: string
+      command:
+        description: "Command or script to execute with gh migrate exec"
+        required: true
+        type: string
+      title:
+        description: "PR title"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    runs-on: hikae-2vcpu-ubuntu-2404
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      INPUT_REPO: ${{ inputs.repo }}
+      INPUT_COMMAND: ${{ inputs.command }}
+      INPUT_TITLE: ${{ inputs.title }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Setup Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Setup gh-migrate
+        run: |
+          go build -o gh-migrate ./app
+          gh extension install .
+          gh migrate --help
+      - name: Run gh-migrate
+        run: |
+          mkdir work
+          args=(exec "$INPUT_COMMAND" --repo "$INPUT_REPO" --workpath work --force)
+          if [ -n "$INPUT_TITLE" ]; then args+=(--title "$INPUT_TITLE"); fi
+          gh migrate "${args[@]}"
